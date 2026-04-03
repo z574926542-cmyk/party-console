@@ -33,14 +33,10 @@ mac:
   category: public.app-category.entertainment
   darkModeSupport: true
   target:
-    - target: dmg
+    - target: zip
       arch:
         - x64
         - arm64
-
-dmg:
-  title: PartyConsole
-  writeUpdateInfo: false
 
 # Windows
 win:

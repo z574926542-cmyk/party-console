@@ -45,11 +45,11 @@ jobs:
           CSC_IDENTITY_AUTO_DISCOVERY: false
           NODE_ENV: production
 
-      - name: Upload macOS DMG
+      - name: Upload macOS App
         uses: actions/upload-artifact@v4
         with:
-          name: mac-dmg
-          path: release/*.dmg
+          name: mac-app
+          path: release/*.zip
           retention-days: 30
 
   build-win:
@@ -101,7 +101,7 @@ jobs:
       - name: Download macOS artifact
         uses: actions/download-artifact@v4
         with:
-          name: mac-dmg
+          name: mac-app
           path: release/mac
 
       - name: Download Windows artifact
@@ -120,7 +120,7 @@ jobs:
             - **macOS**: Download `.dmg`, open and drag app to Applications
             - **Windows**: Download `.exe`, run the installer
           files: |
-            release/mac/*.dmg
+            release/mac/*.zip
             release/win/*.exe
           draft: false
           prerelease: false
