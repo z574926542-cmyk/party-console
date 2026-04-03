@@ -359,9 +359,9 @@ function GameEditor({ game, players, wheels, tags, onSave, onLoadToStage, onSave
   };
 
   const toolOptions = [
-    { type: 'random-pick' as BoundTool['toolType'], label: '快速选人', emoji: '\uD83D\uDC64', gradient: 'linear-gradient(135deg,#ec407a,#f48fb1)' },
-    { type: 'random-group' as BoundTool['toolType'], label: '快速分组', emoji: '\uD83D\uDC65', gradient: 'linear-gradient(135deg,#42a5f5,#26c6da)' },
-    { type: 'countdown' as BoundTool['toolType'], label: '倒计时', emoji: '\u23F1', gradient: 'linear-gradient(135deg,#66bb6a,#26c6da)' },
+    { type: 'random-pick' as BoundTool['toolType'], label: '快速选人', emoji: '👤', gradient: 'linear-gradient(135deg,#ec407a,#f48fb1)' },
+    { type: 'random-group' as BoundTool['toolType'], label: '快速分组', emoji: '👥', gradient: 'linear-gradient(135deg,#42a5f5,#26c6da)' },
+    { type: 'countdown' as BoundTool['toolType'], label: '倒计时', emoji: '⏱', gradient: 'linear-gradient(135deg,#66bb6a,#26c6da)' },
   ];
 
   const hasTool = (type: BoundTool['toolType']) => draft.tools.some(t => t.toolType === type);
@@ -398,13 +398,13 @@ function GameEditor({ game, players, wheels, tags, onSave, onLoadToStage, onSave
           <div className="grid grid-cols-2 gap-3">
             <div>
               <div className="text-xs font-semibold mb-1.5 flex items-center gap-1" style={{ color: '#66bb6a' }}>
-                <span>\uD83C\uDFC6</span> 胜者结算
+                <span>🏆</span> 胜者结算
               </div>
               <textarea className="input-glass resize-none text-sm" rows={2} placeholder="胜者获得..." value={draft.winnerSettlement === '请在此处添加胜者结算方式' ? '' : draft.winnerSettlement} onChange={e => update({ winnerSettlement: e.target.value || '请在此处添加胜者结算方式' })} />
             </div>
             <div>
               <div className="text-xs font-semibold mb-1.5 flex items-center gap-1" style={{ color: '#f48fb1' }}>
-                <span>\uD83D\uDCA7</span> 败者结算
+                <span>💧</span> 败者结算
               </div>
               <textarea className="input-glass resize-none text-sm" rows={2} placeholder="败者需要..." value={draft.loserSettlement === '请在此处添加败者结算方式' ? '' : draft.loserSettlement} onChange={e => update({ loserSettlement: e.target.value || '请在此处添加败者结算方式' })} />
             </div>
@@ -450,7 +450,7 @@ function GameEditor({ game, players, wheels, tags, onSave, onLoadToStage, onSave
               <button key={w.id} onClick={() => toggleWheel(w.id, w.name)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all"
                 style={hasWheel(w.id) ? { background: 'linear-gradient(135deg,#ff8a65,#ffca28)', color: 'white', boxShadow: '0 2px 8px rgba(255,138,101,0.3)' } : { background: 'rgba(200,180,240,0.15)', color: 'oklch(0.50 0.06 280)', border: '1.5px solid rgba(200,180,240,0.3)' }}>
-                <span>\uD83C\uDFAF</span> {w.name}
+                <span>🎯</span> {w.name}
               </button>
             ))}
           </div>
@@ -592,7 +592,7 @@ function LibraryModal({ library, onAdd, onClose }: { library: Game[]; onAdd: (ga
         <div className="flex-1 overflow-y-auto space-y-2">
           {library.length === 0 && (
             <div className="text-center py-12" style={{ color: 'oklch(0.60 0.04 280)' }}>
-              <div className="text-3xl mb-2">\uD83D\uDCDA</div>
+              <div className="text-3xl mb-2">📚</div>
               <div className="text-sm">库中暂无游戏</div>
             </div>
           )}
@@ -707,7 +707,7 @@ export default function ConsolePage() {
             <div className="flex-1 overflow-y-auto p-3 space-y-1.5">
               {state.currentGameList.length === 0 && (
                 <div className="flex flex-col items-center justify-center h-full py-12" style={{ color: 'oklch(0.60 0.04 280)' }}>
-                  <div className="text-4xl mb-3">\uD83C\uDFAE</div>
+                  <div className="text-4xl mb-3">🎮</div>
                   <div className="text-sm font-medium mb-3">暂无游戏</div>
                   <button onClick={handleNewGame} className="px-4 py-2 rounded-xl text-sm font-bold text-white" style={{ background: 'linear-gradient(135deg,#ec407a,#7c4dff)', boxShadow: '0 4px 14px rgba(124,77,255,0.3)' }}>+ 新建第一个游戏</button>
                 </div>
@@ -731,7 +731,7 @@ export default function ConsolePage() {
               <div className="p-3 flex-shrink-0" style={{ borderTop: '1px solid rgba(200,180,240,0.2)' }}>
                 <button onClick={handleLoadAllToStage} className="w-full py-3 rounded-2xl font-bold text-white text-sm flex items-center justify-center gap-2"
                   style={{ background: 'linear-gradient(135deg,#42a5f5,#26c6da)', boxShadow: '0 4px 16px rgba(66,165,245,0.3)' }}>
-                  <span>\uD83C\uDFAC</span> 载入展台（{state.currentGameList.length} 个游戏）
+                  <span>🎬</span> 载入展台（{state.currentGameList.length} 个游戏）
                 </button>
               </div>
             )}
@@ -763,7 +763,7 @@ export default function ConsolePage() {
             />
           ) : (
             <div className="h-full flex flex-col items-center justify-center" style={{ color: 'oklch(0.60 0.04 280)' }}>
-              <div className="text-5xl mb-4">\u270F\uFE0F</div>
+              <div className="text-5xl mb-4">✏️</div>
               <div className="text-base font-semibold mb-1">选择一个游戏开始编辑</div>
               <div className="text-sm mb-5">或点击"新建"创建一个游戏</div>
               <button onClick={handleNewGame} className="px-5 py-2.5 rounded-2xl font-bold text-white text-sm" style={{ background: 'linear-gradient(135deg,#ec407a,#7c4dff)', boxShadow: '0 4px 14px rgba(124,77,255,0.3)' }}>+ 新建游戏</button>

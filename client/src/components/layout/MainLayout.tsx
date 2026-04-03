@@ -9,7 +9,7 @@ const NAV_ITEMS = [
   {
     path: '/',
     label: '控制台',
-    emoji: '\uD83C\uDFAE',
+    emoji: '🎮',
     gradient: 'linear-gradient(135deg, #ec407a, #7c4dff)',
     shadow: 'rgba(124, 77, 255, 0.35)',
     hoverBg: 'rgba(236, 64, 122, 0.08)',
@@ -17,7 +17,7 @@ const NAV_ITEMS = [
   {
     path: '/stage',
     label: '展台',
-    emoji: '\uD83C\uDFAC',
+    emoji: '🎬',
     gradient: 'linear-gradient(135deg, #42a5f5, #26c6da)',
     shadow: 'rgba(66, 165, 245, 0.35)',
     hoverBg: 'rgba(66, 165, 245, 0.08)',
@@ -25,7 +25,7 @@ const NAV_ITEMS = [
   {
     path: '/wheel',
     label: '轮盘',
-    emoji: '\uD83C\uDFAF',
+    emoji: '🎯',
     gradient: 'linear-gradient(135deg, #ff8a65, #ffca28)',
     shadow: 'rgba(255, 138, 101, 0.35)',
     hoverBg: 'rgba(255, 138, 101, 0.08)',
@@ -33,7 +33,7 @@ const NAV_ITEMS = [
   {
     path: '/peripheral',
     label: '周边',
-    emoji: '\uD83C\uDF81',
+    emoji: '🎁',
     gradient: 'linear-gradient(135deg, #66bb6a, #26c6da)',
     shadow: 'rgba(102, 187, 106, 0.35)',
     hoverBg: 'rgba(102, 187, 106, 0.08)',
