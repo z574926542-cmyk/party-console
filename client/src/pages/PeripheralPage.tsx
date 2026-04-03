@@ -47,13 +47,22 @@ export default function PeripheralPage() {
   const [showCompleted, setShowCompleted] = useState(true);
   const [search, setSearch] = useState('');
   const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
+  const [selectedPlayer, setSelectedPlayer] = useState<number | null>(null);
 
   const records = state.peripheralRecords ?? [];
+
+  // 从记录中提取所有有效玩家号，排序
+  const allPlayerNumbers = useMemo(() => {
+    const nums = new Set<number>();
+    records.forEach(r => { if (r.playerNumber > 0) nums.add(r.playerNumber); });
+    return Array.from(nums).sort((a, b) => a - b);
+  }, [records]);
 
   const filtered = useMemo(() => records.filter(r => {
     if (!showCompleted && r.completed) return false;
     if (filter === 'reward' && r.category !== 'reward') return false;
     if (filter === 'penalty' && r.category !== 'penalty') return false;
+    if (selectedPlayer !== null && r.playerNumber !== selectedPlayer) return false;
     if (search) {
       const q = search.toLowerCase();
       return (
@@ -64,7 +73,7 @@ export default function PeripheralPage() {
       );
     }
     return true;
-  }), [records, filter, showCompleted, search]);
+  }), [records, filter, showCompleted, search, selectedPlayer]);
 
   const stats = {
     total: records.length,
@@ -208,6 +217,55 @@ export default function PeripheralPage() {
           </div>
         </div>
       </div>
+
+      {/* 玩家号快速筛选条 */}
+      {allPlayerNumbers.length > 0 && (
+        <div className="flex-shrink-0 px-6 py-2 flex items-center gap-2 flex-wrap"
+          style={{ background: 'rgba(255,255,255,0.35)', borderBottom: '1px solid rgba(200,180,240,0.15)' }}>
+          <span className="text-xs font-semibold flex-shrink-0" style={{ color: 'oklch(0.55 0.04 280)' }}>按玩家：</span>
+          <button
+            onClick={() => setSelectedPlayer(null)}
+            className="px-2.5 py-1 rounded-xl text-xs font-bold transition-all"
+            style={selectedPlayer === null
+              ? { background: 'linear-gradient(135deg,#ec407a,#7c4dff)', color: 'white', boxShadow: '0 2px 6px rgba(124,77,255,0.3)' }
+              : { background: 'rgba(200,180,240,0.15)', color: 'oklch(0.50 0.06 280)', border: '1px solid rgba(200,180,240,0.25)' }
+            }>
+            全部
+          </button>
+          {allPlayerNumbers.map(num => {
+            const playerRecords = records.filter(r => r.playerNumber === num);
+            const pendingCount = playerRecords.filter(r => !r.completed).length;
+            return (
+              <button
+                key={num}
+                onClick={() => setSelectedPlayer(selectedPlayer === num ? null : num)}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold transition-all"
+                style={selectedPlayer === num
+                  ? { background: 'linear-gradient(135deg,#ec407a,#7c4dff)', color: 'white', boxShadow: '0 2px 6px rgba(124,77,255,0.3)' }
+                  : { background: 'rgba(200,180,240,0.15)', color: 'oklch(0.50 0.06 280)', border: '1px solid rgba(200,180,240,0.25)' }
+                }>
+                <span className="w-5 h-5 rounded-lg flex items-center justify-center font-black text-xs"
+                  style={selectedPlayer === num
+                    ? { background: 'rgba(255,255,255,0.25)' }
+                    : { background: 'linear-gradient(135deg,#ec407a,#7c4dff)', color: 'white' }
+                  }>{num}</span>
+                {pendingCount > 0 && (
+                  <span className="px-1 rounded-full text-xs font-bold"
+                    style={selectedPlayer === num
+                      ? { background: 'rgba(255,255,255,0.3)', color: 'white' }
+                      : { background: 'rgba(239,68,68,0.15)', color: '#ef4444' }
+                    }>{pendingCount}</span>
+                )}
+              </button>
+            );
+          })}
+          {selectedPlayer !== null && (
+            <span className="text-xs ml-1" style={{ color: 'oklch(0.60 0.04 280)' }}>
+              共 {filtered.length} 条记录，{filtered.filter(r => !r.completed).length} 条待完成
+            </span>
+          )}
+        </div>
+      )}
 
       {/* 表格区域 */}
       <div className="flex-1 overflow-auto px-6 py-4">
