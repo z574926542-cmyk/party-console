@@ -107,6 +107,7 @@ export default function PeripheralPage() {
   const SOURCE_LABELS: Record<string, string> = {
     'game-winner': '游戏胜者',
     'game-loser': '游戏败者',
+    'wheel-result': '轮盘',
     'wheel': '轮盘',
     'manual': '手动',
   };

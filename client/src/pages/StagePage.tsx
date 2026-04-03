@@ -398,28 +398,59 @@ export default function StagePage() {
 
   const handleSettle = (settlement: 'winner' | 'loser', playerNums: number[]) => {
     if (!currentGame || !currentItem) return;
-    const maxSerial = state.peripheralRecords.reduce((max, r) => Math.max(max, r.serialNumber), 0);
-    playerNums.forEach((num, i) => {
-      dispatch({
-        type: 'ADD_PERIPHERAL_RECORD',
-        payload: {
-          id: nanoid(),
-          serialNumber: maxSerial + i + 1,
-          playerNumber: num,
-          category: settlement === 'winner' ? ('reward' as const) : ('penalty' as const),
-          title: settlement === 'winner'
-            ? (currentGame.winnerSettlement || '周边奖励')
-            : (currentGame.loserSettlement || '惩罚'),
-          notes: settlement === 'winner' ? '胜者结算' : '败者结算',
-          completed: false,
-          source: settlement === 'winner' ? ('game-winner' as const) : ('game-loser' as const),
-          sourceGameName: currentGame.name,
-          createdAt: Date.now(),
-        },
+    let serial = state.peripheralRecords.reduce((max, r) => Math.max(max, r.serialNumber), 0);
+    const source = settlement === 'winner' ? ('game-winner' as const) : ('game-loser' as const);
+    const category = settlement === 'winner' ? ('reward' as const) : ('penalty' as const);
+
+    if (settlement === 'winner' && currentGame.settlementImages && currentGame.settlementImages.length > 0) {
+      // 胜者有周边奖励图片：每个玩家×每个周边各创建一条记录，标题为周边名称
+      playerNums.forEach(num => {
+        currentGame.settlementImages.forEach(img => {
+          serial += 1;
+          dispatch({
+            type: 'ADD_PERIPHERAL_RECORD',
+            payload: {
+              id: nanoid(),
+              serialNumber: serial,
+              playerNumber: num,
+              category,
+              title: img.name || '周边奖励',
+              previewImage: img.dataUrl,
+              notes: currentGame.winnerSettlement || '',
+              completed: false,
+              source,
+              sourceGameName: currentGame.name,
+              createdAt: Date.now(),
+            },
+          });
+        });
       });
-    });
+    } else {
+      // 无周边图片：每个玩家创建一条记录，标题为结算方式文本
+      playerNums.forEach(num => {
+        serial += 1;
+        dispatch({
+          type: 'ADD_PERIPHERAL_RECORD',
+          payload: {
+            id: nanoid(),
+            serialNumber: serial,
+            playerNumber: num,
+            category,
+            title: settlement === 'winner'
+              ? (currentGame.winnerSettlement || '周边奖励')
+              : (currentGame.loserSettlement || '惩罚'),
+            notes: settlement === 'winner' ? '胜者结算' : '败者结算',
+            completed: false,
+            source,
+            sourceGameName: currentGame.name,
+            createdAt: Date.now(),
+          },
+        });
+      });
+    }
+
     setSettledItems(prev => { const next = new Set(Array.from(prev)); next.add(`${currentItem.id}-${settlement}`); return next; });
-    toast.success(`已记录 ${playerNums.length} 位玩家的周边`);
+    toast.success(`已记录 ${playerNums.length} 位玩家的结算`);
     setActiveModal(null);
   };
 

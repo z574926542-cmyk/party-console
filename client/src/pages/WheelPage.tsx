@@ -141,9 +141,11 @@ function OptionRow({ opt, onChange, onRemove, canRemove }: { opt: WheelOption; o
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 3 * 1024 * 1024) { toast.error('图片不能超过 3MB'); return; }
+    // 自动用图片文件名（去掉扩展名）替换选项标签
+    const nameWithoutExt = file.name.replace(/\.[^.]+$/, '');
     const reader = new FileReader();
     // 存入 imageDataUrl（运行时缓存），不持久化到 localStorage
-    reader.onload = ev => onChange({ ...opt, imageDataUrl: ev.target?.result as string });
+    reader.onload = ev => onChange({ ...opt, imageDataUrl: ev.target?.result as string, label: nameWithoutExt });
     reader.readAsDataURL(file);
   };
   return (
