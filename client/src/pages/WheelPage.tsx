@@ -138,6 +138,7 @@ function PickPlayerModal({ players, onConfirm, onClose }: { players: PlayerIdent
 
 function OptionRow({ opt, onChange, onRemove, canRemove }: { opt: WheelOption; onChange: (u: WheelOption) => void; onRemove: () => void; canRemove: boolean }) {
   const fileRef = useRef<HTMLInputElement>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -151,13 +152,14 @@ function OptionRow({ opt, onChange, onRemove, canRemove }: { opt: WheelOption; o
   };
   return (
     <div className="flex flex-col gap-1.5 p-2.5 rounded-xl" style={{ background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(200,180,240,0.2)' }}>
+      {/* 第一行：颜色 + 名称 + 权重 */}
       <div className="flex items-center gap-2">
         <div className="relative flex-shrink-0 w-7 h-7 rounded-lg" style={{ background: opt.color }}>
           <input type="color" value={opt.color} onChange={e => onChange({ ...opt, color: e.target.value })}
             className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
         </div>
         <input type="text" value={opt.label} onChange={e => onChange({ ...opt, label: e.target.value })}
-          className="flex-1 px-2 py-1 rounded-lg text-sm font-medium bg-transparent border-none outline-none"
+          className="flex-1 min-w-0 px-2 py-1 rounded-lg text-sm font-medium bg-transparent border-none outline-none"
           style={{ color: 'oklch(0.22 0.02 280)' }} placeholder="选项名称" />
         <div className="flex items-center gap-1 flex-shrink-0">
           <button onClick={() => onChange({ ...opt, weight: Math.max(1, opt.weight - 1) })}
@@ -168,22 +170,26 @@ function OptionRow({ opt, onChange, onRemove, canRemove }: { opt: WheelOption; o
             className="w-5 h-5 rounded-md text-xs font-bold flex items-center justify-center"
             style={{ background: 'rgba(200,180,240,0.3)', color: 'oklch(0.45 0.06 280)' }}>+</button>
         </div>
+      </div>
+      {/* 第二行：周边/惩罚标签 + 删除 */}
+      <div className="flex items-center gap-2 pl-9">
         {/* 周边奖励标签 */}
         <button onClick={() => onChange({ ...opt, isPeripheral: !opt.isPeripheral, isPenalty: opt.isPeripheral ? opt.isPenalty : false })}
-          className="px-2 py-1 rounded-lg text-xs font-bold flex-shrink-0 transition-all"
+          className="px-2.5 py-1 rounded-lg text-xs font-bold flex-shrink-0 transition-all"
           style={opt.isPeripheral
             ? { background: 'linear-gradient(135deg,#f59e0b,#f97316)', color: 'white', boxShadow: '0 2px 6px rgba(245,158,11,0.35)' }
             : { background: 'rgba(200,180,240,0.15)', color: 'oklch(0.55 0.04 280)', border: '1px solid rgba(200,180,240,0.3)' }}>
-          ★周边
+          ★ 周边
         </button>
         {/* 惩罚标签 */}
         <button onClick={() => onChange({ ...opt, isPenalty: !opt.isPenalty, isPeripheral: opt.isPenalty ? opt.isPeripheral : false })}
-          className="px-2 py-1 rounded-lg text-xs font-bold flex-shrink-0 transition-all"
+          className="px-2.5 py-1 rounded-lg text-xs font-bold flex-shrink-0 transition-all"
           style={opt.isPenalty
             ? { background: 'linear-gradient(135deg,#ef4444,#f97316)', color: 'white', boxShadow: '0 2px 6px rgba(239,68,68,0.35)' }
             : { background: 'rgba(200,180,240,0.15)', color: 'oklch(0.55 0.04 280)', border: '1px solid rgba(200,180,240,0.3)' }}>
-          ⚡惩罚
+          ⚡ 惩罚
         </button>
+        <div className="flex-1" />
         {canRemove && (
           <button onClick={onRemove} className="w-6 h-6 rounded-md flex items-center justify-center text-sm flex-shrink-0"
             style={{ color: '#ef4444', background: 'rgba(239,68,68,0.1)' }}>×</button>
@@ -194,8 +200,12 @@ function OptionRow({ opt, onChange, onRemove, canRemove }: { opt: WheelOption; o
         <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
         {opt.imageDataUrl ? (
           <div className="flex items-center gap-2">
-            <img src={opt.imageDataUrl} alt="选项图片" className="w-8 h-8 rounded-lg object-cover"
-              style={{ border: '1px solid rgba(200,180,240,0.3)' }} />
+            <img
+              src={opt.imageDataUrl} alt="选项图片"
+              className="w-8 h-8 rounded-lg object-cover cursor-pointer transition-transform hover:scale-110"
+              style={{ border: '1px solid rgba(200,180,240,0.3)' }}
+              onClick={() => setPreviewOpen(true)}
+              title="点击放大预览" />
             <button onClick={() => onChange({ ...opt, imageDataUrl: undefined })}
               className="text-xs px-2 py-0.5 rounded-md"
               style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}>移除图片</button>
@@ -208,6 +218,29 @@ function OptionRow({ opt, onChange, onRemove, canRemove }: { opt: WheelOption; o
           </button>
         )}
       </div>
+      {/* 图片灯箱预览 */}
+      {previewOpen && opt.imageDataUrl && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)' }}
+          onClick={() => setPreviewOpen(false)}>
+          <div className="relative max-w-[80vw] max-h-[80vh]" onClick={e => e.stopPropagation()}>
+            <img
+              src={opt.imageDataUrl}
+              alt={opt.label}
+              className="max-w-full max-h-[80vh] rounded-2xl object-contain"
+              style={{ boxShadow: `0 16px 48px ${opt.color}66` }} />
+            <div className="absolute bottom-0 left-0 right-0 text-center py-3 text-white font-bold text-lg"
+              style={{ background: 'linear-gradient(transparent, rgba(0,0,0,0.6))', borderRadius: '0 0 1rem 1rem' }}>
+              {opt.label}
+            </div>
+            <button
+              onClick={() => setPreviewOpen(false)}
+              className="absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center font-bold text-lg"
+              style={{ background: 'rgba(255,255,255,0.2)', color: 'white', backdropFilter: 'blur(4px)' }}>×</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -573,7 +606,7 @@ export default function WheelPage() {
 
           {/* 右侧面板：结果 或 配置 */}
           {(resultOption || showConfig) && (
-            <div className="w-80 flex-shrink-0 flex flex-col overflow-hidden"
+            <div className="w-96 flex-shrink-0 flex flex-col overflow-hidden"
               style={{ background: 'rgba(255,255,255,0.55)', backdropFilter: 'blur(16px)', borderLeft: '1px solid rgba(200,180,240,0.25)' }}>
               {/* 结果展示（优先） */}
               {resultOption ? (
