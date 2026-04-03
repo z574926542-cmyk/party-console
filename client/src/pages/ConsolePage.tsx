@@ -154,45 +154,55 @@ function QuickGroupModal({ players, onClose }: { players: PlayerIdentity[]; onCl
   );
 
   return (
-    <div className="tool-modal-backdrop" onClick={onClose}>
-      <div className="tool-modal w-[480px] p-6" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between mb-5">
+    <div className="fixed inset-0 z-50 flex flex-col" style={{ background: 'linear-gradient(135deg, oklch(0.97 0.02 280) 0%, oklch(0.94 0.04 300) 100%)' }}>
+      {/* 顶部控制栏 */}
+      <div className="flex items-center justify-between px-8 py-5 border-b" style={{ borderColor: 'rgba(200,180,240,0.3)', background: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(12px)' }}>
+        <div className="flex items-center gap-6">
           <div>
-            <h3 className="text-lg font-black" style={{ color: 'oklch(0.22 0.02 280)' }}>快速分组</h3>
-            <p className="text-xs mt-0.5" style={{ color: 'oklch(0.55 0.04 280)' }}>共 {players.length} 位玩家</p>
+            <h3 className="text-2xl font-black" style={{ color: 'oklch(0.22 0.02 280)' }}>👥 快速分组</h3>
+            <p className="text-sm mt-0.5" style={{ color: 'oklch(0.55 0.04 280)' }}>共 {players.length} 位玩家</p>
           </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center font-bold" style={{ background: 'rgba(200,180,240,0.2)', color: 'oklch(0.45 0.06 280)' }}>x</button>
-        </div>
-        <div className="mb-4">
-          <div className="section-label">分几组</div>
-          <div className="flex items-center gap-3">
-            <button onClick={() => setGroupCount(Math.max(2, groupCount - 1))} className="w-9 h-9 rounded-xl font-bold text-lg flex items-center justify-center" style={{ background: 'rgba(200,180,240,0.2)', color: 'oklch(0.45 0.06 280)' }}>-</button>
-            <span className="text-2xl font-black w-8 text-center" style={{ color: 'oklch(0.22 0.02 280)' }}>{groupCount}</span>
-            <button onClick={() => setGroupCount(Math.min(10, groupCount + 1))} className="w-9 h-9 rounded-xl font-bold text-lg flex items-center justify-center" style={{ background: 'rgba(200,180,240,0.2)', color: 'oklch(0.45 0.06 280)' }}>+</button>
-            <span className="text-xs ml-2" style={{ color: 'oklch(0.55 0.04 280)' }}>每组约 {Math.ceil(players.length / groupCount)} 人</span>
+          <div className="flex items-center gap-3 ml-8">
+            <span className="text-sm font-semibold" style={{ color: 'oklch(0.45 0.06 280)' }}>分几组</span>
+            <button onClick={() => setGroupCount(Math.max(2, groupCount - 1))} className="w-10 h-10 rounded-xl font-bold text-xl flex items-center justify-center" style={{ background: 'rgba(200,180,240,0.3)', color: 'oklch(0.45 0.06 280)' }}>-</button>
+            <span className="text-3xl font-black w-12 text-center" style={{ color: 'oklch(0.22 0.02 280)', fontVariantNumeric: 'tabular-nums' }}>{groupCount}</span>
+            <button onClick={() => setGroupCount(Math.min(10, groupCount + 1))} className="w-10 h-10 rounded-xl font-bold text-xl flex items-center justify-center" style={{ background: 'rgba(200,180,240,0.3)', color: 'oklch(0.45 0.06 280)' }}>+</button>
+            <span className="text-sm ml-2" style={{ color: 'oklch(0.55 0.04 280)' }}>每组约 {Math.ceil(players.length / groupCount)} 人</span>
+          </div>
+          <div className="flex gap-5 ml-6">
+            <CheckBox active={balanceGender} onToggle={() => { setBalanceGender(!balanceGender); setBalanceSocial(false); }} label="男女平衡" />
+            <CheckBox active={balanceSocial} onToggle={() => { setBalanceSocial(!balanceSocial); setBalanceGender(false); }} label="社牛社恐平衡" />
           </div>
         </div>
-        <div className="mb-5 flex gap-4">
-          <CheckBox active={balanceGender} onToggle={() => { setBalanceGender(!balanceGender); setBalanceSocial(false); }} label="男女平衡" />
-          <CheckBox active={balanceSocial} onToggle={() => { setBalanceSocial(!balanceSocial); setBalanceGender(false); }} label="社牛社恐平衡" />
+        <div className="flex items-center gap-3">
+          <button onClick={handleGroup} className="px-8 py-3 rounded-2xl font-bold text-white text-base" style={{ background: 'linear-gradient(135deg,#42a5f5,#7c4dff)', boxShadow: '0 4px 16px rgba(66,165,245,0.3)' }}>
+            {results.length > 0 ? '🔀 重新分组' : '▶ 开始分组'}
+          </button>
+          <button onClick={onClose} className="w-11 h-11 rounded-full flex items-center justify-center font-bold text-lg" style={{ background: 'rgba(200,180,240,0.3)', color: 'oklch(0.45 0.06 280)' }}>✕</button>
         </div>
-        {results.length > 0 && (
-          <div className="mb-5 grid grid-cols-2 gap-3">
+      </div>
+
+      {/* 分组结果区域 - 全屏大字 */}
+      <div className="flex-1 overflow-auto p-8">
+        {results.length === 0 ? (
+          <div className="h-full flex flex-col items-center justify-center gap-4">
+            <div className="text-8xl">👥</div>
+            <p className="text-2xl font-bold" style={{ color: 'oklch(0.55 0.04 280)' }}>点击「开始分组」生成分组结果</p>
+          </div>
+        ) : (
+          <div className="grid gap-6" style={{ gridTemplateColumns: `repeat(${Math.min(groupCount, 4)}, 1fr)` }}>
             {results.map((group, gi) => (
-              <div key={gi} className="p-3 rounded-2xl" style={{ background: 'rgba(255,255,255,0.7)', border: '1px solid rgba(200,180,240,0.3)' }}>
-                <div className="text-xs font-bold mb-2" style={{ background: grads[gi % grads.length], WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>第 {gi + 1} 组</div>
-                <div className="flex flex-wrap gap-1.5">
+              <div key={gi} className="rounded-3xl p-6 flex flex-col" style={{ background: 'rgba(255,255,255,0.85)', boxShadow: '0 8px 32px rgba(124,77,255,0.12)', border: '2px solid rgba(200,180,240,0.3)' }}>
+                <div className="text-xl font-black mb-4 pb-3 border-b" style={{ background: grads[gi % grads.length], WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', borderColor: 'rgba(200,180,240,0.3)' }}>第 {gi + 1} 组 · {group.length} 人</div>
+                <div className="flex flex-wrap gap-3">
                   {group.map(n => (
-                    <span key={n} className="w-7 h-7 rounded-lg flex items-center justify-center font-bold text-white text-xs" style={{ background: grads[gi % grads.length] }}>{n}</span>
+                    <span key={n} className="rounded-2xl flex items-center justify-center font-black text-white" style={{ background: grads[gi % grads.length], fontSize: '1.75rem', width: '3.5rem', height: '3.5rem', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', fontVariantNumeric: 'tabular-nums' }}>{n}</span>
                   ))}
                 </div>
               </div>
             ))}
           </div>
         )}
-        <button onClick={handleGroup} className="w-full py-3 rounded-2xl font-bold text-white text-sm" style={{ background: 'linear-gradient(135deg,#42a5f5,#7c4dff)', boxShadow: '0 4px 16px rgba(66,165,245,0.3)' }}>
-          {results.length > 0 ? '重新分组' : '开始分组'}
-        </button>
       </div>
     </div>
   );
@@ -312,7 +322,8 @@ interface GameEditorProps {
   tags: Array<{ id: string; name: string; color: string }>;
   onSave: (game: Game) => void;
   onLoadToStage: () => void;
-  onSaveToLibrary: () => void;
+  onSaveToLibrary: (game: Game) => void;
+  onCheckNameDup?: (name: string) => void;
 }
 
 function safeDraft(g: Game): Game {
@@ -328,7 +339,7 @@ function safeDraft(g: Game): Game {
     notes: g.notes || '',
   };
 }
-function GameEditor({ game, players, wheels, tags, onSave, onLoadToStage, onSaveToLibrary }: GameEditorProps) {
+function GameEditor({ game, players, wheels, tags, onSave, onLoadToStage, onSaveToLibrary, onCheckNameDup }: GameEditorProps) {
   const [draft, setDraft] = useState<Game>(() => safeDraft(game));
   const [showToolModal, setShowToolModal] = useState<'pick' | 'group' | 'countdown' | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -386,7 +397,7 @@ function GameEditor({ game, players, wheels, tags, onSave, onLoadToStage, onSave
       <div className="flex items-center justify-between px-5 py-3 flex-shrink-0" style={{ borderBottom: '1px solid rgba(200,180,240,0.2)', background: 'rgba(255,255,255,0.5)' }}>
         <span className="text-sm font-bold" style={{ color: 'oklch(0.55 0.06 310)' }}>游戏编辑器</span>
         <div className="flex items-center gap-2">
-          <button onClick={onSaveToLibrary} className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all" style={{ background: 'rgba(200,180,240,0.2)', color: 'oklch(0.45 0.06 280)' }}>入库</button>
+          <button onClick={() => onSaveToLibrary(draft)} className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all" style={{ background: 'rgba(200,180,240,0.2)', color: 'oklch(0.45 0.06 280)' }}>入库</button>
           <button onClick={onLoadToStage} className="px-4 py-1.5 rounded-xl text-xs font-bold text-white transition-all" style={{ background: 'linear-gradient(135deg,#42a5f5,#26c6da)', boxShadow: '0 2px 8px rgba(66,165,245,0.3)' }}>载入展台</button>
         </div>
       </div>
@@ -396,7 +407,7 @@ function GameEditor({ game, players, wheels, tags, onSave, onLoadToStage, onSave
         {/* 游戏名称 */}
         <div>
           <div className="section-label">游戏名称</div>
-          <input className="input-glass text-base font-bold" placeholder="输入游戏名称..." value={draft.name === '无标题游戏' ? '' : draft.name} onChange={e => update({ name: e.target.value || '无标题游戏' })} />
+          <input className="input-glass text-base font-bold" placeholder="输入游戏名称..." value={draft.name === '无标题游戏' ? '' : draft.name} onChange={e => update({ name: e.target.value || '无标题游戏' })} onBlur={() => onCheckNameDup && onCheckNameDup(draft.name)} />
         </div>
 
         {/* 游戏规则 */}
@@ -630,6 +641,72 @@ function LibraryModal({ library, onAdd, onClose }: { library: Game[]; onAdd: (ga
 }
 
 // ============================================================
+// 入库重名对话框
+// ============================================================
+function LibDuplicateDialog({
+  gameName,
+  onOverwrite,
+  onRename,
+  onCancel,
+}: {
+  gameName: string;
+  onOverwrite: () => void;
+  onRename: (newName: string) => void;
+  onCancel: () => void;
+}) {
+  const [newName, setNewName] = React.useState(gameName + ' (副本)');
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center"
+      style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(6px)' }}
+      onClick={onCancel}>
+      <div className="w-[420px] rounded-3xl p-7 flex flex-col gap-5"
+        style={{ background: 'rgba(255,255,255,0.97)', boxShadow: '0 20px 60px rgba(100,80,180,0.18)', border: '1px solid rgba(200,180,240,0.3)' }}
+        onClick={e => e.stopPropagation()}>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-xl flex-shrink-0"
+            style={{ background: 'linear-gradient(135deg,#f59e0b,#ef4444)' }}>⚠️</div>
+          <div>
+            <div className="font-black text-base" style={{ color: 'oklch(0.18 0.02 280)' }}>库中已有同名游戏</div>
+            <div className="text-xs mt-0.5" style={{ color: 'oklch(0.55 0.04 280)' }}>「{gameName}」</div>
+          </div>
+        </div>
+        <p className="text-sm leading-relaxed" style={{ color: 'oklch(0.40 0.04 280)' }}>
+          库中已存在名为「{gameName}」的游戏。可以覆盖（保留一个），也可以改名后另存。
+        </p>
+        <div>
+          <div className="text-xs font-bold mb-1.5" style={{ color: 'oklch(0.45 0.06 280)' }}>改名后入库（输入新名称）</div>
+          <input
+            className="w-full px-3 py-2 rounded-xl text-sm outline-none"
+            style={{ background: 'rgba(200,180,240,0.15)', border: '1.5px solid rgba(200,180,240,0.4)', color: 'oklch(0.22 0.02 280)' }}
+            value={newName}
+            onChange={e => setNewName(e.target.value)}
+            placeholder="输入新名称..."
+            onKeyDown={e => { if (e.key === 'Enter' && newName.trim()) onRename(newName.trim()); }}
+          />
+        </div>
+        <div className="flex gap-2">
+          <button onClick={onCancel}
+            className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all"
+            style={{ background: 'rgba(200,180,240,0.2)', color: 'oklch(0.45 0.06 280)' }}>
+            取消
+          </button>
+          <button onClick={onOverwrite}
+            className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition-all"
+            style={{ background: 'linear-gradient(135deg,#f59e0b,#ef4444)', boxShadow: '0 4px 14px rgba(239,68,68,0.3)' }}>
+            覆盖保留一个
+          </button>
+          <button onClick={() => { if (newName.trim()) onRename(newName.trim()); }}
+            className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition-all"
+            style={{ background: 'linear-gradient(135deg,#42a5f5,#26c6da)', boxShadow: '0 4px 14px rgba(66,165,245,0.3)' }}>
+            改名入库
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
 // 主页面
 // ============================================================
 type ConsoleTab = 'games' | 'identity';
@@ -641,6 +718,7 @@ export default function ConsolePage() {
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [libDupPending, setLibDupPending] = useState<Game | null>(null); // 入库时库中重名
 
   const handleDragStart = (e: React.DragEvent, idx: number) => {
     setDragIndex(idx);
@@ -665,7 +743,15 @@ export default function ConsolePage() {
 
   const handleNewGame = () => {
     const game = createNewGame();
-    dispatch({ type: 'ADD_GAME_TO_LIST', payload: game });
+    // 自动生成不重复的名称
+    const listNames = state.currentGameList.map(item => item.gameData.name);
+    let name = game.name;
+    if (listNames.includes(name)) {
+      let i = 2;
+      while (listNames.includes(`${game.name} ${i}`)) i++;
+      name = `${game.name} ${i}`;
+    }
+    dispatch({ type: 'ADD_GAME_TO_LIST', payload: { ...game, name } });
     setTimeout(() => {
       setSelectedItemId(prev => {
         const list = state.currentGameList;
@@ -678,16 +764,36 @@ export default function ConsolePage() {
     dispatch({ type: 'UPDATE_GAME_IN_LIST', payload: { itemId, gameData: game } });
   };
 
+  const handleCheckListDupName = (itemId: string, name: string) => {
+    const duplicate = state.currentGameList.find(item => item.id !== itemId && item.gameData.name === name);
+    if (duplicate) {
+      toast.warning(`列表中已有同名游戏「${name}」，建议修改名称以区分`);
+    }
+  };
+
   const handleSaveToLibrary = (game: Game) => {
     const duplicate = state.gameLibrary.find(g => g.name === game.name && g.id !== game.id);
     if (duplicate) {
-      // 同名已存在：强制覆盖（控制台入库时直接覆盖）
-      dispatch({ type: 'ADD_GAME_TO_LIBRARY_FORCE', payload: game });
-      toast.success(`「${game.name}」已更新入库`);
+      // 同名已存在：弹出对话框让用户选择
+      setLibDupPending(game);
     } else {
       dispatch({ type: 'ADD_GAME_TO_LIBRARY', payload: game });
       toast.success(`「${game.name}」已入库`);
     }
+  };
+
+  const handleLibDupOverwrite = () => {
+    if (!libDupPending) return;
+    dispatch({ type: 'ADD_GAME_TO_LIBRARY_FORCE', payload: libDupPending });
+    toast.success(`「${libDupPending.name}」已覆盖入库`);
+    setLibDupPending(null);
+  };
+
+  const handleLibDupRename = (newName: string) => {
+    if (!libDupPending) return;
+    dispatch({ type: 'ADD_GAME_TO_LIBRARY', payload: { ...libDupPending, name: newName } });
+    toast.success(`已以「${newName}」入库`);
+    setLibDupPending(null);
   };
 
   const handleLoadAllToStage = () => {
@@ -810,7 +916,8 @@ export default function ConsolePage() {
               tags={state.tags}
               onSave={(game) => handleSaveGame(selectedItem.id, game)}
               onLoadToStage={handleLoadAllToStage}
-              onSaveToLibrary={() => handleSaveToLibrary(selectedItem.gameData)}
+              onSaveToLibrary={(game) => handleSaveToLibrary(game)}
+              onCheckNameDup={(name) => handleCheckListDupName(selectedItem.id, name)}
             />
           ) : (
             <div className="h-full flex flex-col items-center justify-center" style={{ color: 'oklch(0.60 0.04 280)' }}>
@@ -823,7 +930,15 @@ export default function ConsolePage() {
         </div>
       )}
 
-
+      {/* 入库重名弹窗 */}
+      {libDupPending && (
+        <LibDuplicateDialog
+          gameName={libDupPending.name}
+          onOverwrite={handleLibDupOverwrite}
+          onRename={handleLibDupRename}
+          onCancel={() => setLibDupPending(null)}
+        />
+      )}
     </div>
   );
 }

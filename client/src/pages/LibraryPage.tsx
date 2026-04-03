@@ -11,45 +11,68 @@ import { exportSingleGame, parseSingleGameJSON, exportSingleGroup, parseGroupJSO
 import type { Game, GameGroup } from '@/types';
 
 // ============================================================
-// 覆盖确认对话框
+// 重名冲突对话框（改名 / 覆盖 / 取消）
 // ============================================================
-function OverwriteDialog({
+function DuplicateDialog({
+  title,
+  description,
   gameName,
-  onConfirm,
+  newNamePlaceholder,
+  onRename,
+  onOverwrite,
   onCancel,
 }: {
+  title: string;
+  description: string;
   gameName: string;
-  onConfirm: () => void;
+  newNamePlaceholder?: string;
+  onRename: (newName: string) => void;
+  onOverwrite: () => void;
   onCancel: () => void;
 }) {
+  const [newName, setNewName] = React.useState(gameName + ' (副本)');
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center"
       style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(6px)' }}
       onClick={onCancel}>
-      <div className="w-[380px] rounded-3xl p-7 flex flex-col gap-5"
+      <div className="w-[420px] rounded-3xl p-7 flex flex-col gap-5"
         style={{ background: 'rgba(255,255,255,0.97)', boxShadow: '0 20px 60px rgba(100,80,180,0.18)', border: '1px solid rgba(200,180,240,0.3)' }}
         onClick={e => e.stopPropagation()}>
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-xl flex-shrink-0"
             style={{ background: 'linear-gradient(135deg,#f59e0b,#ef4444)' }}>⚠️</div>
           <div>
-            <div className="font-black text-base" style={{ color: 'oklch(0.18 0.02 280)' }}>库中已有同名游戏</div>
-            <div className="text-xs mt-0.5" style={{ color: 'oklch(0.55 0.04 280)' }}>是否覆盖「{gameName}」？</div>
+            <div className="font-black text-base" style={{ color: 'oklch(0.18 0.02 280)' }}>{title}</div>
+            <div className="text-xs mt-0.5" style={{ color: 'oklch(0.55 0.04 280)' }}>「{gameName}」</div>
           </div>
         </div>
-        <p className="text-sm leading-relaxed" style={{ color: 'oklch(0.40 0.04 280)' }}>
-          库中已存在名为 <strong>「{gameName}」</strong> 的游戏，覆盖后原有数据将被替换，此操作不可撤销。
-        </p>
-        <div className="flex gap-3">
+        <p className="text-sm leading-relaxed" style={{ color: 'oklch(0.40 0.04 280)' }}>{description}</p>
+        <div>
+          <div className="text-xs font-bold mb-1.5" style={{ color: 'oklch(0.45 0.06 280)' }}>改名后加入（输入新名称）</div>
+          <input
+            className="w-full px-3 py-2 rounded-xl text-sm outline-none"
+            style={{ background: 'rgba(200,180,240,0.15)', border: '1.5px solid rgba(200,180,240,0.4)', color: 'oklch(0.22 0.02 280)' }}
+            value={newName}
+            onChange={e => setNewName(e.target.value)}
+            placeholder={newNamePlaceholder || '输入新名称...'}
+            onKeyDown={e => { if (e.key === 'Enter' && newName.trim()) onRename(newName.trim()); }}
+          />
+        </div>
+        <div className="flex gap-2">
           <button onClick={onCancel}
             className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all"
             style={{ background: 'rgba(200,180,240,0.2)', color: 'oklch(0.45 0.06 280)' }}>
             取消
           </button>
-          <button onClick={onConfirm}
+          <button onClick={onOverwrite}
             className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition-all"
             style={{ background: 'linear-gradient(135deg,#f59e0b,#ef4444)', boxShadow: '0 4px 14px rgba(239,68,68,0.3)' }}>
-            确认覆盖
+            覆盖保留一个
+          </button>
+          <button onClick={() => { if (newName.trim()) onRename(newName.trim()); }}
+            className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition-all"
+            style={{ background: 'linear-gradient(135deg,#42a5f5,#26c6da)', boxShadow: '0 4px 14px rgba(66,165,245,0.3)' }}>
+            改名加入
           </button>
         </div>
       </div>
@@ -461,7 +484,8 @@ export default function LibraryPage() {
   const [, navigate] = useLocation();
   const [activeTab, setActiveTab] = useState<PageTab>('library');
   const [search, setSearch] = useState('');
-  const [overwritePending, setOverwritePending] = useState<Game | null>(null);
+  const [overwritePending, setOverwritePending] = useState<Game | null>(null); // 库中重名（导入JSON）
+  const [listDupPending, setListDupPending] = useState<Game | null>(null); // 列表中重名（从库加载）
   const [editingGroup, setEditingGroup] = useState<Partial<GameGroup> | null>(null);
   const gameImportRef = useRef<HTMLInputElement>(null);
   const groupImportRef = useRef<HTMLInputElement>(null);
@@ -487,6 +511,11 @@ export default function LibraryPage() {
 
   // ---- 游戏库操作 ----
   const handleLoad = (game: Game) => {
+    const listNames = state.currentGameList.map(item => item.gameData.name);
+    if (listNames.includes(game.name)) {
+      setListDupPending(game);
+      return;
+    }
     dispatch({ type: 'ADD_GAME_TO_LIST', payload: game });
     toast.success(`「${game.name}」已加入游戏列表`);
   };
@@ -539,6 +568,30 @@ export default function LibraryPage() {
     dispatch({ type: 'ADD_GAME_TO_LIBRARY_FORCE', payload: overwritePending });
     toast.success(`「${overwritePending.name}」已覆盖更新到库`);
     setOverwritePending(null);
+  };
+
+  const handleOverwriteRename = (newName: string) => {
+    if (!overwritePending) return;
+    dispatch({ type: 'ADD_GAME_TO_LIBRARY', payload: { ...overwritePending, name: newName } });
+    toast.success(`已以「${newName}」入库`);
+    setOverwritePending(null);
+  };
+
+  const handleListDupOverwrite = () => {
+    if (!listDupPending) return;
+    // 覆盖：删除列表中同名的，再加入
+    const existing = state.currentGameList.find(item => item.gameData.name === listDupPending.name);
+    if (existing) dispatch({ type: 'REMOVE_GAME_FROM_LIST', payload: existing.id });
+    dispatch({ type: 'ADD_GAME_TO_LIST', payload: listDupPending });
+    toast.success(`「${listDupPending.name}」已覆盖加入列表`);
+    setListDupPending(null);
+  };
+
+  const handleListDupRename = (newName: string) => {
+    if (!listDupPending) return;
+    dispatch({ type: 'ADD_GAME_TO_LIST', payload: { ...listDupPending, name: newName } });
+    toast.success(`已以「${newName}」加入列表`);
+    setListDupPending(null);
   };
 
   // ---- 分组操作 ----
@@ -742,12 +795,27 @@ export default function LibraryPage() {
         )}
       </div>
 
-      {/* 覆盖确认弹窗（游戏） */}
+      {/* 库中重名弹窗（导入JSON） */}
       {overwritePending && (
-        <OverwriteDialog
+        <DuplicateDialog
+          title="库中已有同名游戏"
+          description={`库中已存在名为「${overwritePending.name}」的游戏。可以覆盖（保留一个），也可以改名后另存。`}
           gameName={overwritePending.name}
-          onConfirm={handleOverwriteConfirm}
+          onRename={handleOverwriteRename}
+          onOverwrite={handleOverwriteConfirm}
           onCancel={() => setOverwritePending(null)}
+        />
+      )}
+
+      {/* 列表中重名弹窗（从库加载） */}
+      {listDupPending && (
+        <DuplicateDialog
+          title="列表中已有同名游戏"
+          description={`游戏列表中已存在名为「${listDupPending.name}」的游戏。可以覆盖（保留一个），也可以改名后另存。`}
+          gameName={listDupPending.name}
+          onRename={handleListDupRename}
+          onOverwrite={handleListDupOverwrite}
+          onCancel={() => setListDupPending(null)}
         />
       )}
 
