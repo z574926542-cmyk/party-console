@@ -173,13 +173,116 @@ function RandomPickModal({ players, onClose }: { players: PlayerIdentity[]; onCl
 // ============================================================
 // 工具弹窗 - 快速分组
 // ============================================================
+// 分组结果全屏展示
+// ============================================================
+function GroupResultFullscreen({ results, players, onRegroup, onClose }: {
+  results: number[][];
+  players: PlayerIdentity[];
+  onRegroup: () => void;
+  onClose: () => void;
+}) {
+  const grads = [
+    { bg: 'linear-gradient(135deg,#ec407a,#7c4dff)', solid: '#7c4dff', light: 'rgba(124,77,255,0.12)' },
+    { bg: 'linear-gradient(135deg,#42a5f5,#26c6da)', solid: '#26c6da', light: 'rgba(38,198,218,0.12)' },
+    { bg: 'linear-gradient(135deg,#ff8a65,#ffca28)', solid: '#ff8a65', light: 'rgba(255,138,101,0.12)' },
+    { bg: 'linear-gradient(135deg,#66bb6a,#26c6da)', solid: '#66bb6a', light: 'rgba(102,187,106,0.12)' },
+    { bg: 'linear-gradient(135deg,#ce93d8,#f48fb1)', solid: '#ce93d8', light: 'rgba(206,147,216,0.12)' },
+    { bg: 'linear-gradient(135deg,#ffcc02,#ff8a65)', solid: '#ffca28', light: 'rgba(255,204,2,0.12)' },
+  ];
+
+  // 根据组数决定每行显示几组
+  const cols = results.length <= 2 ? results.length : results.length <= 4 ? 2 : results.length <= 6 ? 3 : 4;
+
+  return (
+    <div
+      className="fixed inset-0 z-[200] flex flex-col"
+      style={{ background: 'linear-gradient(135deg, oklch(0.14 0.03 280) 0%, oklch(0.10 0.04 290) 100%)' }}
+    >
+      {/* 顶部标题栏 */}
+      <div className="flex items-center justify-between px-8 py-4 shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+        <div className="flex items-center gap-3">
+          <span className="text-2xl font-black text-white">分组结果</span>
+          <span className="text-sm px-3 py-1 rounded-full font-medium" style={{ background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)' }}>
+            共 {players.length} 位玩家 · {results.length} 组
+          </span>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onRegroup}
+            className="px-5 py-2 rounded-xl font-bold text-sm"
+            style={{ background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.8)', border: '1px solid rgba(255,255,255,0.15)' }}
+          >
+            重新分组
+          </button>
+          <button
+            onClick={onClose}
+            className="px-5 py-2 rounded-xl font-bold text-sm text-white"
+            style={{ background: 'linear-gradient(135deg,#42a5f5,#7c4dff)' }}
+          >
+            关闭
+          </button>
+        </div>
+      </div>
+
+      {/* 分组卡片区域 */}
+      <div
+        className="flex-1 overflow-auto p-6"
+        style={{ display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: '1.25rem', alignContent: 'start' }}
+      >
+        {results.map((group, gi) => {
+          const g = grads[gi % grads.length];
+          return (
+            <div
+              key={gi}
+              className="rounded-3xl flex flex-col"
+              style={{ background: g.light, border: `2px solid ${g.solid}40`, minHeight: 0 }}
+            >
+              {/* 组标题 */}
+              <div
+                className="px-5 py-3 rounded-t-3xl shrink-0 flex items-center justify-between"
+                style={{ background: g.bg }}
+              >
+                <span className="text-white font-black text-xl tracking-wide">第 {gi + 1} 组</span>
+                <span className="text-white/80 font-semibold text-sm">{group.length} 人</span>
+              </div>
+              {/* 号码列表 */}
+              <div className="p-4 flex flex-wrap gap-3 content-start">
+                {group.map(n => (
+                  <div
+                    key={n}
+                    className="flex items-center justify-center font-black rounded-2xl"
+                    style={{
+                      background: g.bg,
+                      color: '#fff',
+                      fontFamily: '"DIN Alternate", "Bebas Neue", "Barlow", monospace',
+                      fontSize: group.length <= 6 ? '2.8rem' : group.length <= 12 ? '2.2rem' : group.length <= 20 ? '1.8rem' : '1.4rem',
+                      width: group.length <= 6 ? '5rem' : group.length <= 12 ? '4rem' : group.length <= 20 ? '3.2rem' : '2.8rem',
+                      height: group.length <= 6 ? '5rem' : group.length <= 12 ? '4rem' : group.length <= 20 ? '3.2rem' : '2.8rem',
+                      boxShadow: `0 4px 16px ${g.solid}40`,
+                      letterSpacing: '-0.02em',
+                    }}
+                  >
+                    {n}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
 function GroupModal({ players, onClose }: { players: PlayerIdentity[]; onClose: () => void }) {
   const [groupCount, setGroupCount] = useState(2);
   const [balanceGender, setBalanceGender] = useState(false);
   const [balanceSocial, setBalanceSocial] = useState(false);
   const [results, setResults] = useState<number[][]>([]);
+  const [showFullscreen, setShowFullscreen] = useState(false);
 
-  const handleGroup = () => {
+  const doGroup = () => {
     if (players.length === 0) { toast.error('没有玩家'); return; }
     let pool = [...players];
     if (balanceGender) {
@@ -209,10 +312,15 @@ function GroupModal({ players, onClose }: { players: PlayerIdentity[]; onClose: 
     }
     const groups: number[][] = Array.from({ length: groupCount }, () => []);
     pool.forEach((p, i) => groups[i % groupCount].push(p.number));
-    setResults(groups);
+    return groups;
   };
 
-  const grads = ['linear-gradient(135deg,#ec407a,#7c4dff)', 'linear-gradient(135deg,#42a5f5,#26c6da)', 'linear-gradient(135deg,#ff8a65,#ffca28)', 'linear-gradient(135deg,#66bb6a,#26c6da)', 'linear-gradient(135deg,#ce93d8,#f48fb1)', 'linear-gradient(135deg,#ffcc02,#ff8a65)'];
+  const handleGroup = () => {
+    const groups = doGroup();
+    if (!groups) return;
+    setResults(groups);
+    setShowFullscreen(true);
+  };
 
   const CheckBox = ({ active, onToggle, label }: { active: boolean; onToggle: () => void; label: string }) => (
     <label className="flex items-center gap-2 cursor-pointer" onClick={onToggle}>
@@ -225,49 +333,48 @@ function GroupModal({ players, onClose }: { players: PlayerIdentity[]; onClose: 
   );
 
   return (
-    <div className="tool-modal-backdrop" onClick={onClose}>
-      <div className="tool-modal w-[480px] p-6" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between mb-5">
-          <div>
-            <h3 className="text-lg font-black" style={{ color: 'oklch(0.22 0.02 280)' }}>快速分组</h3>
-            <p className="text-xs mt-0.5" style={{ color: 'oklch(0.55 0.04 280)' }}>共 {players.length} 位玩家</p>
+    <>
+      {showFullscreen && results.length > 0 && (
+        <GroupResultFullscreen
+          results={results}
+          players={players}
+          onRegroup={() => {
+            const groups = doGroup();
+            if (groups) setResults(groups);
+          }}
+          onClose={() => { setShowFullscreen(false); onClose(); }}
+        />
+      )}
+      <div className="tool-modal-backdrop" onClick={onClose}>
+        <div className="tool-modal w-[480px] p-6" onClick={e => e.stopPropagation()}>
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h3 className="text-lg font-black" style={{ color: 'oklch(0.22 0.02 280)' }}>快速分组</h3>
+              <p className="text-xs mt-0.5" style={{ color: 'oklch(0.55 0.04 280)' }}>共 {players.length} 位玩家</p>
+            </div>
+            <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-lg"
+              style={{ background: 'rgba(200,180,240,0.2)', color: 'oklch(0.45 0.06 280)' }}>×</button>
           </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-lg"
-            style={{ background: 'rgba(200,180,240,0.2)', color: 'oklch(0.45 0.06 280)' }}>×</button>
-        </div>
-        <div className="mb-4">
-          <div className="section-label">分几组</div>
-          <div className="flex items-center gap-3">
-            <button onClick={() => setGroupCount(Math.max(2, groupCount - 1))} className="w-9 h-9 rounded-xl font-bold text-lg flex items-center justify-center" style={{ background: 'rgba(200,180,240,0.2)', color: 'oklch(0.45 0.06 280)' }}>-</button>
-            <span className="text-2xl font-black w-8 text-center" style={{ color: 'oklch(0.22 0.02 280)' }}>{groupCount}</span>
-            <button onClick={() => setGroupCount(Math.min(10, groupCount + 1))} className="w-9 h-9 rounded-xl font-bold text-lg flex items-center justify-center" style={{ background: 'rgba(200,180,240,0.2)', color: 'oklch(0.45 0.06 280)' }}>+</button>
-            <span className="text-xs ml-2" style={{ color: 'oklch(0.55 0.04 280)' }}>每组约 {Math.ceil(players.length / groupCount)} 人</span>
+          <div className="mb-4">
+            <div className="section-label">分几组</div>
+            <div className="flex items-center gap-3">
+              <button onClick={() => setGroupCount(Math.max(2, groupCount - 1))} className="w-9 h-9 rounded-xl font-bold text-lg flex items-center justify-center" style={{ background: 'rgba(200,180,240,0.2)', color: 'oklch(0.45 0.06 280)' }}>-</button>
+              <span className="text-2xl font-black w-8 text-center" style={{ color: 'oklch(0.22 0.02 280)' }}>{groupCount}</span>
+              <button onClick={() => setGroupCount(Math.min(10, groupCount + 1))} className="w-9 h-9 rounded-xl font-bold text-lg flex items-center justify-center" style={{ background: 'rgba(200,180,240,0.2)', color: 'oklch(0.45 0.06 280)' }}>+</button>
+              <span className="text-xs ml-2" style={{ color: 'oklch(0.55 0.04 280)' }}>每组约 {Math.ceil(players.length / groupCount)} 人</span>
+            </div>
           </div>
-        </div>
-        <div className="mb-5 flex gap-4">
-          <CheckBox active={balanceGender} onToggle={() => { setBalanceGender(!balanceGender); setBalanceSocial(false); }} label="男女平衡" />
-          <CheckBox active={balanceSocial} onToggle={() => { setBalanceSocial(!balanceSocial); setBalanceGender(false); }} label="社牛社恐平衡" />
-        </div>
-        {results.length > 0 && (
-          <div className="mb-5 grid grid-cols-2 gap-3 max-h-48 overflow-y-auto">
-            {results.map((group, gi) => (
-              <div key={gi} className="p-3 rounded-2xl" style={{ background: 'rgba(255,255,255,0.7)', border: '1px solid rgba(200,180,240,0.3)' }}>
-                <div className="text-xs font-bold mb-2" style={{ background: grads[gi % grads.length], WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>第 {gi + 1} 组</div>
-                <div className="flex flex-wrap gap-1.5">
-                  {group.map(n => (
-                    <span key={n} className="w-7 h-7 rounded-lg flex items-center justify-center font-bold text-white text-xs" style={{ background: grads[gi % grads.length] }}>{n}</span>
-                  ))}
-                </div>
-              </div>
-            ))}
+          <div className="mb-5 flex gap-4">
+            <CheckBox active={balanceGender} onToggle={() => { setBalanceGender(!balanceGender); setBalanceSocial(false); }} label="男女平衡" />
+            <CheckBox active={balanceSocial} onToggle={() => { setBalanceSocial(!balanceSocial); setBalanceGender(false); }} label="社牛社恐平衡" />
           </div>
-        )}
-        <button onClick={handleGroup} className="w-full py-3 rounded-2xl font-bold text-white text-sm"
-          style={{ background: 'linear-gradient(135deg,#42a5f5,#7c4dff)', boxShadow: '0 4px 16px rgba(66,165,245,0.3)' }}>
-          {results.length > 0 ? '重新分组' : '开始分组'}
-        </button>
+          <button onClick={handleGroup} className="w-full py-3 rounded-2xl font-bold text-white text-sm"
+            style={{ background: 'linear-gradient(135deg,#42a5f5,#7c4dff)', boxShadow: '0 4px 16px rgba(66,165,245,0.3)' }}>
+            开始分组
+          </button>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 

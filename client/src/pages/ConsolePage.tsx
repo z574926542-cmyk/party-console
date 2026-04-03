@@ -9,6 +9,7 @@ import { useLocation } from 'wouter';
 import { nanoid } from 'nanoid';
 import { toast } from 'sonner';
 import { useApp } from '@/contexts/AppContext';
+import { saveImage as saveImageToStore, deleteImage as deleteImageFromStore } from '@/lib/imageStore';
 import type { Game, BoundTool, PlayerIdentity } from '@/types';
 
 // ============================================================
@@ -374,9 +375,11 @@ function GameEditor({ game, players, wheels, tags, onSave, onLoadToStage, onSave
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (ev) => {
+    reader.onload = async (ev) => {
       const dataUrl = ev.target?.result as string;
-      update({ settlementImages: [...draft.settlementImages, { id: nanoid(), name: file.name.replace(/\.[^/.]+$/, ''), dataUrl }] });
+      const imageId = nanoid();
+      await saveImageToStore(imageId, dataUrl);
+      update({ settlementImages: [...draft.settlementImages, { id: nanoid(), name: file.name.replace(/\.[^/.]+$/, ''), dataUrl, imageId }] });
     };
     reader.readAsDataURL(file);
     e.target.value = '';
@@ -447,7 +450,10 @@ function GameEditor({ game, players, wheels, tags, onSave, onLoadToStage, onSave
                     onChange={e => { const imgs = [...draft.settlementImages]; imgs[idx] = { ...img, name: e.target.value }; update({ settlementImages: imgs }); }} placeholder="周边名称..." />
                   <div className="text-xs mt-0.5" style={{ color: 'oklch(0.60 0.04 280)' }}>周边奖励</div>
                 </div>
-                <button onClick={() => update({ settlementImages: draft.settlementImages.filter(i => i.id !== img.id) })} className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold" style={{ background: 'rgba(244,143,177,0.2)', color: '#e91e63' }}>x</button>
+                <button onClick={() => {
+                  if (img.imageId) { deleteImageFromStore(img.imageId).catch(() => {}); }
+                  update({ settlementImages: draft.settlementImages.filter(i => i.id !== img.id) });
+                }} className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold" style={{ background: 'rgba(244,143,177,0.2)', color: '#e91e63' }}>x</button>
               </div>
             ))}
             <button onClick={() => fileInputRef.current?.click()} className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-all" style={{ color: 'oklch(0.55 0.08 310)', border: '1.5px dashed rgba(200,180,240,0.4)' }}>

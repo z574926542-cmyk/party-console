@@ -7,6 +7,7 @@ import { useApp } from '@/contexts/AppContext';
 import { nanoid } from 'nanoid';
 import { toast } from 'sonner';
 import { exportSingleWheel, parseSingleWheelJSON } from '@/store';
+import { saveImage, deleteImage } from '@/lib/imageStore';
 import type { Wheel, WheelOption, WheelHistoryEntry, PlayerIdentity } from '@/types';
 
 // 三个默认轮盘 ID（与 store/index.ts 保持一致）
@@ -143,11 +144,17 @@ function OptionRow({ opt, onChange, onRemove, canRemove }: { opt: WheelOption; o
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 3 * 1024 * 1024) { toast.error('图片不能超过 3MB'); return; }
-    // 自动用图片文件名（去掉扩展名）替换选项标签
-    const nameWithoutExt = file.name.replace(/\.[^.]+$/, '');
+    const nameWithoutExt = file.name.replace(/.[^.]+$/, '');
     const reader = new FileReader();
-    // 存入 imageDataUrl（运行时缓存），不持久化到 localStorage
-    reader.onload = ev => onChange({ ...opt, imageDataUrl: ev.target?.result as string, label: nameWithoutExt });
+    reader.onload = async (ev) => {
+      const dataUrl = ev.target?.result as string;
+      // 删除旧图片（如果有）
+      if (opt.imageId) { deleteImage(opt.imageId).catch(() => {}); }
+      // 保存新图片到 IndexedDB
+      const newImageId = nanoid();
+      await saveImage(newImageId, dataUrl);
+      onChange({ ...opt, imageDataUrl: dataUrl, imageId: newImageId, label: nameWithoutExt });
+    };
     reader.readAsDataURL(file);
   };
   return (
@@ -206,7 +213,10 @@ function OptionRow({ opt, onChange, onRemove, canRemove }: { opt: WheelOption; o
               style={{ border: '1px solid rgba(200,180,240,0.3)' }}
               onClick={() => setPreviewOpen(true)}
               title="点击放大预览" />
-            <button onClick={() => onChange({ ...opt, imageDataUrl: undefined })}
+            <button onClick={() => {
+              if (opt.imageId) { deleteImage(opt.imageId).catch(() => {}); }
+              onChange({ ...opt, imageDataUrl: undefined, imageId: undefined });
+            }}
               className="text-xs px-2 py-0.5 rounded-md"
               style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}>移除图片</button>
           </div>
@@ -214,7 +224,7 @@ function OptionRow({ opt, onChange, onRemove, canRemove }: { opt: WheelOption; o
           <button onClick={() => fileRef.current?.click()}
             className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg transition-all"
             style={{ background: 'rgba(200,180,240,0.15)', color: 'oklch(0.55 0.04 280)', border: '1px dashed rgba(200,180,240,0.4)' }}>
-            📷 添加图片（抽中时展示，仅本次有效）
+            📷 添加图片（抽中时展示）
           </button>
         )}
       </div>

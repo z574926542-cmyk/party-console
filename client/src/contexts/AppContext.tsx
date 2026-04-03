@@ -27,6 +27,7 @@ import {
   removeGameGroup,
   loadGroupToCurrentList,
 } from '../store';
+import { loadAllImages } from '../lib/imageStore';
 import { nanoid } from 'nanoid';
 
 // ---- Action Types ----
@@ -214,6 +215,50 @@ const AppContext = createContext<AppContextValue | null>(null);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(reducer, null, () => loadState());
+
+  // 启动时从 IndexedDB 恢复所有图片到内存状态
+  useEffect(() => {
+    loadAllImages().then(imageMap => {
+      if (Object.keys(imageMap).length === 0) return;
+      dispatch({
+        type: 'SET_STATE',
+        payload: {
+          ...state,
+          // 恢复游戏库中的周边奖励图片
+          gameLibrary: state.gameLibrary.map(g => ({
+            ...g,
+            settlementImages: g.settlementImages.map(img =>
+              img.imageId && imageMap[img.imageId]
+                ? { ...img, dataUrl: imageMap[img.imageId] }
+                : img
+            ),
+          })),
+          // 恢复当前游戏列表中的周边奖励图片
+          currentGameList: state.currentGameList.map(item => ({
+            ...item,
+            gameData: {
+              ...item.gameData,
+              settlementImages: item.gameData.settlementImages.map(img =>
+                img.imageId && imageMap[img.imageId]
+                  ? { ...img, dataUrl: imageMap[img.imageId] }
+                  : img
+              ),
+            },
+          })),
+          // 恢复轮盘选项图片
+          wheels: state.wheels.map(w => ({
+            ...w,
+            options: w.options.map(o =>
+              (o as any).imageId && imageMap[(o as any).imageId]
+                ? { ...o, imageDataUrl: imageMap[(o as any).imageId] }
+                : o
+            ),
+          })),
+        },
+      });
+    }).catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const createNewGame = useCallback(() => createDefaultGame(), []);
   
