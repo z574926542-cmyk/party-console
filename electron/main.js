@@ -2,9 +2,8 @@
 // 奇妙奇遇游戏控制台 - Electron 主进程
 // ============================================================
 
-const { app, BrowserWindow, shell, Menu } = require('electron');
+const { app, BrowserWindow, shell, Menu, protocol } = require('electron');
 const path = require('path');
-const url = require('url');
 
 // 保持对窗口对象的全局引用，避免被垃圾回收
 let mainWindow;
@@ -19,7 +18,8 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      webSecurity: true,
+      // 允许 file:// 协议加载本地 CSS/JS 资源
+      webSecurity: false,
     },
     // macOS 特定设置
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
@@ -32,13 +32,13 @@ function createWindow() {
     mainWindow.loadURL('http://localhost:3000');
     mainWindow.webContents.openDevTools();
   } else {
-    mainWindow.loadURL(
-      url.format({
-        pathname: path.join(__dirname, '../dist/public/index.html'),
-        protocol: 'file:',
-        slashes: true,
-      })
-    );
+    // 打包后结构：
+    //   Resources/app/electron/main.js
+    //   Resources/app/dist/public/index.html
+    // __dirname = Resources/app/electron
+    // 所以 index.html 在 __dirname/../dist/public/index.html
+    const indexPath = path.join(__dirname, '..', 'dist', 'public', 'index.html');
+    mainWindow.loadFile(indexPath);
   }
 
   // 外部链接在默认浏览器中打开

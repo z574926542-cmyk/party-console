@@ -2,8 +2,8 @@ appId: com.partyConsole.app
 productName: 奇妙奇遇游戏控制台
 copyright: Copyright © 2025
 
-# 应用图标（需要放在 electron/icons/ 目录下）
-# icon: electron/icons/icon
+# 应用图标
+icon: electron/icons/icon
 
 directories:
   buildResources: electron/icons
@@ -14,6 +14,7 @@ files:
   - dist/public/**
   - electron/main.js
   - electron/package.json
+  - electron/icons/**
   - "!node_modules/**"
   - "!client/**"
   - "!server/**"
