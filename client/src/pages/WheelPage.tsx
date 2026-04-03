@@ -1,6 +1,6 @@
 // 奇妙奇遇控制台 - 轮盘页面（亮色渐变风）
 // 固定三个默认轮盘：抽奖 / 惩罚 / 挑战
-// 可折叠配置面板，选人并开始，周边属性自动同步
+// 可折叠配置面板，选人并开始，周边/惩罚属性自动同步结算清单
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useApp } from '@/contexts/AppContext';
@@ -8,56 +8,8 @@ import { nanoid } from 'nanoid';
 import { toast } from 'sonner';
 import type { Wheel, WheelOption, WheelHistoryEntry, PlayerIdentity } from '@/types';
 
-const DEFAULT_IDS = ['wheel-default-lottery', 'wheel-default-penalty', 'wheel-default-challenge'];
-
-function useEnsureDefaultWheels() {
-  const { state, dispatch } = useApp();
-  useEffect(() => {
-    const defaults: Wheel[] = [
-      {
-        id: 'wheel-default-lottery', name: '抽奖', isDefault: true,
-        options: [
-          { id: 'opt-l1', label: '一等奖', weight: 1, color: '#f59e0b', isPeripheral: true },
-          { id: 'opt-l2', label: '二等奖', weight: 2, color: '#6366f1', isPeripheral: true },
-          { id: 'opt-l3', label: '三等奖', weight: 3, color: '#10b981', isPeripheral: true },
-          { id: 'opt-l4', label: '安慰奖', weight: 4, color: '#06b6d4', isPeripheral: false },
-          { id: 'opt-l5', label: '再来一次', weight: 3, color: '#f43f5e', isPeripheral: false },
-          { id: 'opt-l6', label: '谢谢参与', weight: 5, color: '#64748b', isPeripheral: false },
-        ],
-        history: [], createdAt: Date.now(), updatedAt: Date.now(),
-      },
-      {
-        id: 'wheel-default-penalty', name: '惩罚', isDefault: true,
-        options: [
-          { id: 'opt-p1', label: '喝一杯', weight: 3, color: '#ef4444', isPeripheral: false },
-          { id: 'opt-p2', label: '唱一首歌', weight: 2, color: '#f97316', isPeripheral: false },
-          { id: 'opt-p3', label: '讲个笑话', weight: 3, color: '#eab308', isPeripheral: false },
-          { id: 'opt-p4', label: '俯卧撑', weight: 2, color: '#ec4899', isPeripheral: false },
-          { id: 'opt-p5', label: '真心话', weight: 3, color: '#8b5cf6', isPeripheral: false },
-          { id: 'opt-p6', label: '大冒险', weight: 2, color: '#06b6d4', isPeripheral: false },
-        ],
-        history: [], createdAt: Date.now(), updatedAt: Date.now(),
-      },
-      {
-        id: 'wheel-default-challenge', name: '挑战', isDefault: true,
-        options: [
-          { id: 'opt-c1', label: '才艺展示', weight: 2, color: '#6366f1', isPeripheral: false },
-          { id: 'opt-c2', label: '猜谜题', weight: 3, color: '#10b981', isPeripheral: false },
-          { id: 'opt-c3', label: '绕口令', weight: 3, color: '#f59e0b', isPeripheral: false },
-          { id: 'opt-c4', label: '肢体挑战', weight: 2, color: '#ef4444', isPeripheral: false },
-          { id: 'opt-c5', label: '即兴表演', weight: 2, color: '#ec4899', isPeripheral: false },
-          { id: 'opt-c6', label: '知识问答', weight: 3, color: '#06b6d4', isPeripheral: false },
-        ],
-        history: [], createdAt: Date.now(), updatedAt: Date.now(),
-      },
-    ];
-    defaults.forEach(dw => {
-      if (!state.wheels.find(w => w.id === dw.id)) {
-        dispatch({ type: 'ADD_WHEEL', payload: dw });
-      }
-    });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-}
+// 三个默认轮盘 ID（与 store/index.ts 保持一致）
+const DEFAULT_IDS = ['wheel-default-lottery', 'wheel-default-punishment', 'wheel-default-challenge'];
 
 function WheelCanvas({ options, rotation }: { options: WheelOption[]; rotation: number }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -83,6 +35,7 @@ function WheelCanvas({ options, rotation }: { options: WheelOption[]; rotation: 
       ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, r, startAngle, endAngle); ctx.closePath();
       ctx.fillStyle = opt.color; ctx.fill();
       ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 2; ctx.stroke();
+      // 周边奖励标记（★）
       if (opt.isPeripheral) {
         const bx = cx + Math.cos(midAngle) * r * 0.82;
         const by = cy + Math.sin(midAngle) * r * 0.82;
@@ -90,6 +43,15 @@ function WheelCanvas({ options, rotation }: { options: WheelOption[]; rotation: 
         ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.fill();
         ctx.fillStyle = '#f59e0b'; ctx.font = 'bold 9px sans-serif';
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('★', bx, by);
+      }
+      // 惩罚标记（⚡）
+      if (opt.isPenalty) {
+        const px = cx + Math.cos(midAngle) * r * 0.68;
+        const py = cy + Math.sin(midAngle) * r * 0.68;
+        ctx.beginPath(); ctx.arc(px, py, 7, 0, 2 * Math.PI);
+        ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.fill();
+        ctx.fillStyle = '#ef4444'; ctx.font = 'bold 9px sans-serif';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('!', px, py);
       }
       ctx.save(); ctx.translate(cx, cy); ctx.rotate(midAngle);
       ctx.translate(r * 0.58, 0);
@@ -180,7 +142,8 @@ function OptionRow({ opt, onChange, onRemove, canRemove }: { opt: WheelOption; o
     if (!file) return;
     if (file.size > 3 * 1024 * 1024) { toast.error('图片不能超过 3MB'); return; }
     const reader = new FileReader();
-    reader.onload = ev => onChange({ ...opt, image: ev.target?.result as string });
+    // 存入 imageDataUrl（运行时缓存），不持久化到 localStorage
+    reader.onload = ev => onChange({ ...opt, imageDataUrl: ev.target?.result as string });
     reader.readAsDataURL(file);
   };
   return (
@@ -202,26 +165,35 @@ function OptionRow({ opt, onChange, onRemove, canRemove }: { opt: WheelOption; o
             className="w-5 h-5 rounded-md text-xs font-bold flex items-center justify-center"
             style={{ background: 'rgba(200,180,240,0.3)', color: 'oklch(0.45 0.06 280)' }}>+</button>
         </div>
-        <button onClick={() => onChange({ ...opt, isPeripheral: !opt.isPeripheral })}
+        {/* 周边奖励标签 */}
+        <button onClick={() => onChange({ ...opt, isPeripheral: !opt.isPeripheral, isPenalty: opt.isPeripheral ? opt.isPenalty : false })}
           className="px-2 py-1 rounded-lg text-xs font-bold flex-shrink-0 transition-all"
           style={opt.isPeripheral
             ? { background: 'linear-gradient(135deg,#f59e0b,#f97316)', color: 'white', boxShadow: '0 2px 6px rgba(245,158,11,0.35)' }
             : { background: 'rgba(200,180,240,0.15)', color: 'oklch(0.55 0.04 280)', border: '1px solid rgba(200,180,240,0.3)' }}>
           ★周边
         </button>
+        {/* 惩罚标签 */}
+        <button onClick={() => onChange({ ...opt, isPenalty: !opt.isPenalty, isPeripheral: opt.isPenalty ? opt.isPeripheral : false })}
+          className="px-2 py-1 rounded-lg text-xs font-bold flex-shrink-0 transition-all"
+          style={opt.isPenalty
+            ? { background: 'linear-gradient(135deg,#ef4444,#f97316)', color: 'white', boxShadow: '0 2px 6px rgba(239,68,68,0.35)' }
+            : { background: 'rgba(200,180,240,0.15)', color: 'oklch(0.55 0.04 280)', border: '1px solid rgba(200,180,240,0.3)' }}>
+          ⚡惩罚
+        </button>
         {canRemove && (
           <button onClick={onRemove} className="w-6 h-6 rounded-md flex items-center justify-center text-sm flex-shrink-0"
             style={{ color: '#ef4444', background: 'rgba(239,68,68,0.1)' }}>×</button>
         )}
       </div>
-      {/* 图片上传 */}
+      {/* 图片上传（运行时预览，不持久化） */}
       <div className="flex items-center gap-2 pl-9">
         <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-        {opt.image ? (
+        {opt.imageDataUrl ? (
           <div className="flex items-center gap-2">
-            <img src={opt.image} alt="选项图片" className="w-8 h-8 rounded-lg object-cover"
+            <img src={opt.imageDataUrl} alt="选项图片" className="w-8 h-8 rounded-lg object-cover"
               style={{ border: '1px solid rgba(200,180,240,0.3)' }} />
-            <button onClick={() => onChange({ ...opt, image: undefined })}
+            <button onClick={() => onChange({ ...opt, imageDataUrl: undefined })}
               className="text-xs px-2 py-0.5 rounded-md"
               style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}>移除图片</button>
           </div>
@@ -229,7 +201,7 @@ function OptionRow({ opt, onChange, onRemove, canRemove }: { opt: WheelOption; o
           <button onClick={() => fileRef.current?.click()}
             className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg transition-all"
             style={{ background: 'rgba(200,180,240,0.15)', color: 'oklch(0.55 0.04 280)', border: '1px dashed rgba(200,180,240,0.4)' }}>
-            📷 添加图片（抽中时展示）
+            📷 添加图片（抽中时展示，仅本次有效）
           </button>
         )}
       </div>
@@ -239,7 +211,6 @@ function OptionRow({ opt, onChange, onRemove, canRemove }: { opt: WheelOption; o
 
 
 export default function WheelPage() {
-  useEnsureDefaultWheels();
   const { state, dispatch } = useApp();
 
   const defaultWheels = DEFAULT_IDS.map(id => state.wheels.find(w => w.id === id)).filter(Boolean) as Wheel[];
@@ -298,11 +269,15 @@ export default function WheelPage() {
         setSpinning(false);
         setResultOption(winner);
         setResultPlayers(playerNums);
+        // 更新历史记录
         const entry: WheelHistoryEntry = {
           id: nanoid(), optionLabel: winner.label, optionColor: winner.color,
-          playerNumbers: playerNums, timestamp: Date.now(), isPeripheral: winner.isPeripheral,
+          playerNumbers: playerNums, timestamp: Date.now(),
+          isPeripheral: winner.isPeripheral,
+          isPenalty: winner.isPenalty,
         };
         dispatch({ type: 'UPDATE_WHEEL', payload: { ...activeWheel, history: [entry, ...activeWheel.history].slice(0, 50), updatedAt: Date.now() } });
+        // 周边奖励 → 同步到结算清单（reward 分类）
         if (winner.isPeripheral) {
           const targets = playerNums.length > 0 ? playerNums : [0];
           const maxSerial = state.peripheralRecords.reduce((max, r) => Math.max(max, r.serialNumber), 0);
@@ -313,14 +288,34 @@ export default function WheelPage() {
                 id: nanoid(), serialNumber: maxSerial + i + 1, playerNumber: num,
                 category: 'reward' as const,
                 title: winner.label,
-                previewImage: winner.image,
+                previewImage: winner.imageDataUrl,
                 notes: `${activeWheel.name} · ${winner.label}`,
                 completed: false, source: 'wheel-result' as const,
                 sourceWheelName: activeWheel.name, sourceWheelOption: winner.label, createdAt: Date.now(),
               },
             });
           });
-          toast.success(`“${winner.label}” 已同步至结算清单`);
+          toast.success(`"${winner.label}" 已同步至结算清单（周边奖励）`);
+        }
+        // 惩罚 → 同步到结算清单（penalty 分类）
+        if (winner.isPenalty) {
+          const targets = playerNums.length > 0 ? playerNums : [0];
+          const maxSerial = state.peripheralRecords.reduce((max, r) => Math.max(max, r.serialNumber), 0);
+          targets.forEach((num, i) => {
+            dispatch({
+              type: 'ADD_PERIPHERAL_RECORD',
+              payload: {
+                id: nanoid(), serialNumber: maxSerial + i + 1, playerNumber: num,
+                category: 'penalty' as const,
+                title: winner.label,
+                previewImage: winner.imageDataUrl,
+                notes: `${activeWheel.name} · ${winner.label}`,
+                completed: false, source: 'wheel-result' as const,
+                sourceWheelName: activeWheel.name, sourceWheelOption: winner.label, createdAt: Date.now(),
+              },
+            });
+          });
+          toast.success(`"${winner.label}" 已同步至结算清单（惩罚）`);
         }
       }
     };
@@ -334,7 +329,18 @@ export default function WheelPage() {
   const handleAddOption = () => {
     if (!activeWheel) return;
     const colors = ['#f59e0b', '#6366f1', '#10b981', '#ef4444', '#06b6d4', '#ec4899', '#f97316', '#8b5cf6'];
-    dispatch({ type: 'UPDATE_WHEEL', payload: { ...activeWheel, options: [...activeWheel.options, { id: nanoid(), label: `选项 ${activeWheel.options.length + 1}`, weight: 2, color: colors[activeWheel.options.length % colors.length], isPeripheral: false }], updatedAt: Date.now() } });
+    dispatch({
+      type: 'UPDATE_WHEEL',
+      payload: {
+        ...activeWheel,
+        options: [...activeWheel.options, {
+          id: nanoid(), label: `选项 ${activeWheel.options.length + 1}`,
+          weight: 2, color: colors[activeWheel.options.length % colors.length],
+          isPeripheral: false, isPenalty: false,
+        }],
+        updatedAt: Date.now(),
+      },
+    });
   };
   const handleRemoveOption = (optId: string) => {
     if (!activeWheel || activeWheel.options.length <= 2) { toast.error('至少需要2个选项'); return; }
@@ -344,9 +350,9 @@ export default function WheelPage() {
     const newWheel: Wheel = {
       id: nanoid(), name: `自定义轮盘 ${customWheels.length + 1}`,
       options: [
-        { id: nanoid(), label: '选项A', weight: 2, color: '#6366f1', isPeripheral: false },
-        { id: nanoid(), label: '选项B', weight: 2, color: '#10b981', isPeripheral: false },
-        { id: nanoid(), label: '选项C', weight: 2, color: '#f59e0b', isPeripheral: false },
+        { id: nanoid(), label: '选项A', weight: 2, color: '#6366f1', isPeripheral: false, isPenalty: false },
+        { id: nanoid(), label: '选项B', weight: 2, color: '#10b981', isPeripheral: false, isPenalty: false },
+        { id: nanoid(), label: '选项C', weight: 2, color: '#f59e0b', isPeripheral: false, isPenalty: false },
       ],
       history: [], isDefault: false, createdAt: Date.now(), updatedAt: Date.now(),
     };
@@ -367,7 +373,14 @@ export default function WheelPage() {
 
   useEffect(() => () => { if (animRef.current) cancelAnimationFrame(animRef.current); }, []);
 
-  if (!activeWheel) return null;
+  if (!activeWheel) return (
+    <div className="h-[calc(100vh-64px)] flex items-center justify-center">
+      <div className="text-center" style={{ color: 'oklch(0.55 0.04 280)' }}>
+        <div className="text-4xl mb-3">🎡</div>
+        <div className="text-sm font-semibold">正在加载轮盘…</div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="h-[calc(100vh-64px)] flex overflow-hidden">
@@ -388,7 +401,7 @@ export default function WheelPage() {
                 style={w.id === activeWheelId
                   ? { background: 'linear-gradient(135deg,rgba(236,64,122,0.1),rgba(124,77,255,0.1))', border: '1.5px solid rgba(124,77,255,0.3)' }
                   : { background: 'rgba(255,255,255,0.6)', border: '1.5px solid rgba(200,180,240,0.2)' }}>
-                <span className="text-base">{w.id === 'wheel-default-lottery' ? '🎁' : w.id === 'wheel-default-penalty' ? '💧' : '⚡'}</span>
+                <span className="text-base">{w.id === 'wheel-default-lottery' ? '🎁' : w.id === 'wheel-default-punishment' ? '⚡' : '🎯'}</span>
                 <span className="text-sm font-semibold" style={{ color: w.id === activeWheelId ? 'oklch(0.22 0.02 280)' : 'oklch(0.45 0.04 280)' }}>{w.name}</span>
               </button>
             ))}
@@ -414,7 +427,7 @@ export default function WheelPage() {
       {/* 主区域 */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* 顶部工具栏 */}
-        <div className="flex-shrink-0 px-6 py-3 flex items-center gap-3"
+        <div className="flex items-center gap-3 px-4 py-2.5 flex-shrink-0"
           style={{ borderBottom: '1px solid rgba(200,180,240,0.2)', background: 'rgba(255,255,255,0.4)', backdropFilter: 'blur(12px)' }}>
           <button onClick={() => setShowWheelList(!showWheelList)} className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all"
             style={showWheelList ? { background: 'linear-gradient(135deg,#7c4dff,#42a5f5)', color: 'white' } : { background: 'rgba(200,180,240,0.2)', color: 'oklch(0.45 0.06 280)' }}>
@@ -491,6 +504,7 @@ export default function WheelPage() {
                       <span className="text-sm font-semibold flex-1" style={{ color: 'oklch(0.30 0.04 280)' }}>{h.optionLabel}</span>
                       {h.playerNumbers.length > 0 && <span className="text-xs" style={{ color: 'oklch(0.55 0.04 280)' }}>{h.playerNumbers.slice(0, 3).join(', ')}{h.playerNumbers.length > 3 ? '…' : ''}</span>}
                       {h.isPeripheral && <span className="text-xs" style={{ color: '#f59e0b' }}>★</span>}
+                      {h.isPenalty && <span className="text-xs" style={{ color: '#ef4444' }}>⚡</span>}
                       <span className="text-xs flex-shrink-0" style={{ color: 'oklch(0.65 0.02 280)' }}>
                         {new Date(h.timestamp).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
                       </span>
@@ -512,8 +526,8 @@ export default function WheelPage() {
                     style={{ background: 'linear-gradient(135deg,rgba(236,64,122,0.1),rgba(124,77,255,0.1))', color: '#ec407a' }}>
                     🎯 抽中结果
                   </div>
-                  {resultOption.image && (
-                    <img src={resultOption.image} alt={resultOption.label}
+                  {resultOption.imageDataUrl && (
+                    <img src={resultOption.imageDataUrl} alt={resultOption.label}
                       className="w-36 h-36 rounded-2xl object-cover"
                       style={{ border: `3px solid ${resultOption.color}`, boxShadow: `0 8px 24px ${resultOption.color}44` }} />
                   )}
@@ -523,7 +537,13 @@ export default function WheelPage() {
                   {resultOption.isPeripheral && (
                     <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold"
                       style={{ background: 'rgba(245,158,11,0.12)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.3)' }}>
-                      ★ 已同步至结算清单
+                      ★ 已同步至结算清单（周边奖励）
+                    </div>
+                  )}
+                  {resultOption.isPenalty && (
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold"
+                      style={{ background: 'rgba(239,68,68,0.08)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.25)' }}>
+                      ⚡ 已同步至结算清单（惩罚）
                     </div>
                   )}
                   {resultPlayers.length > 0 && (
@@ -559,8 +579,9 @@ export default function WheelPage() {
                     ))}
                   </div>
                   <div className="px-4 py-3 flex-shrink-0" style={{ borderTop: '1px solid rgba(200,180,240,0.2)' }}>
-                    <div className="text-xs" style={{ color: 'oklch(0.60 0.04 280)' }}>
-                      <span className="font-bold" style={{ color: '#f59e0b' }}>★周边</span> 标记的选项抽中后自动同步至结算清单
+                    <div className="text-xs space-y-1" style={{ color: 'oklch(0.60 0.04 280)' }}>
+                      <div><span className="font-bold" style={{ color: '#f59e0b' }}>★周边</span> 抽中后自动同步至结算清单（周边奖励）</div>
+                      <div><span className="font-bold" style={{ color: '#ef4444' }}>⚡惩罚</span> 抽中后自动同步至结算清单（惩罚）</div>
                     </div>
                   </div>
                 </>

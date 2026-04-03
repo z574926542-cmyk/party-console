@@ -24,7 +24,8 @@ export interface BoundTool {
 export interface SettlementImage {
   id: string;
   name: string;
-  dataUrl: string;
+  dataUrl?: string;   // 运行时从 IndexedDB 加载，不存入 localStorage
+  imageId?: string;   // IndexedDB key
 }
 
 // ---- 游戏 ----
@@ -68,8 +69,10 @@ export interface WheelOption {
   label: string;
   weight: number;
   color: string;
-  isPeripheral: boolean;
-  image?: string; // base64 dataUrl
+  isPeripheral: boolean;  // 周边奖励属性
+  isPenalty: boolean;     // 惩罚属性
+  imageId?: string;       // IndexedDB key（不存 base64 到 localStorage）
+  imageDataUrl?: string;  // 运行时缓存，不持久化
   notes?: string;
 }
 
@@ -81,6 +84,7 @@ export interface WheelHistoryEntry {
   playerNumbers: number[];
   timestamp: number;
   isPeripheral: boolean;
+  isPenalty: boolean;
 }
 
 // ---- 轮盘 ----
