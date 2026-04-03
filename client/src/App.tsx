@@ -1,39 +1,42 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import Home from "./pages/Home";
-
+import { AppProvider } from "./contexts/AppContext";
+import MainLayout from "./components/layout/MainLayout";
+import ConsolePage from "./pages/ConsolePage";
+import StagePage from "./pages/StagePage";
+import WheelPage from "./pages/WheelPage";
+import PeripheralPage from "./pages/PeripheralPage";
+import ToolsPage from "./pages/ToolsPage";
+import NotFound from "./pages/NotFound";
 
 function Router() {
   return (
-    <Switch>
-      <Route path={"/"} component={Home} />
-      <Route path={"/404"} component={NotFound} />
-      {/* Final fallback route */}
-      <Route component={NotFound} />
-    </Switch>
+    <MainLayout>
+      <Switch>
+        <Route path="/" component={ConsolePage} />
+        <Route path="/stage" component={StagePage} />
+        <Route path="/wheel" component={WheelPage} />
+        <Route path="/peripheral" component={PeripheralPage} />
+        <Route path="/tools" component={ToolsPage} />
+        <Route component={NotFound} />
+      </Switch>
+    </MainLayout>
   );
 }
-
-// NOTE: About Theme
-// - First choose a default theme according to your design style (dark or light bg), than change color palette in index.css
-//   to keep consistent foreground/background color across components
-// - If you want to make theme switchable, pass `switchable` ThemeProvider and use `useTheme` hook
 
 function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider
-        defaultTheme="light"
-        // switchable
-      >
-        <TooltipProvider>
-          <Toaster />
-          <Router />
-        </TooltipProvider>
+      <ThemeProvider defaultTheme="dark">
+        <AppProvider>
+          <TooltipProvider>
+            <Toaster position="top-right" theme="dark" />
+            <Router />
+          </TooltipProvider>
+        </AppProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );
