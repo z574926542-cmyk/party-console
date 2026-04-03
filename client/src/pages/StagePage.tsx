@@ -406,10 +406,13 @@ export default function StagePage() {
           id: nanoid(),
           serialNumber: maxSerial + i + 1,
           playerNumber: num,
-          peripheralCode: `P-${String(maxSerial + i + 1).padStart(4, '0')}`,
+          category: settlement === 'winner' ? ('reward' as const) : ('penalty' as const),
+          title: settlement === 'winner'
+            ? (currentGame.winnerSettlement || '周边奖励')
+            : (currentGame.loserSettlement || '惩罚'),
           notes: settlement === 'winner' ? '胜者结算' : '败者结算',
           completed: false,
-          source: 'game-settlement',
+          source: settlement === 'winner' ? ('game-winner' as const) : ('game-loser' as const),
           sourceGameName: currentGame.name,
           createdAt: Date.now(),
         },
@@ -520,7 +523,7 @@ export default function StagePage() {
           <div className="max-w-3xl mx-auto space-y-5">
             {/* 游戏标题 */}
             <div className="text-center py-4">
-              <div className="text-4xl font-black mb-2" style={{ color: 'oklch(0.18 0.02 280)', letterSpacing: '-0.02em' }}>
+              <div className="text-6xl font-black mb-3" style={{ color: 'oklch(0.15 0.02 280)', letterSpacing: '-0.03em', lineHeight: '1.1' }}>
                 {showNames ? currentGame.name : `游戏 ${currentIndex + 1}`}
               </div>
               {currentGame.tags.length > 0 && (
@@ -542,8 +545,8 @@ export default function StagePage() {
             {/* 游戏规则 */}
             {currentGame.rules && (
               <div className="glass-card p-5">
-                <div className="section-label mb-3">游戏规则</div>
-                <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: 'oklch(0.30 0.02 280)' }}>
+                <div className="text-sm font-bold uppercase tracking-widest mb-4" style={{ color: 'oklch(0.55 0.06 280)' }}>游戏规则</div>
+                <p className="text-lg leading-loose whitespace-pre-wrap font-medium" style={{ color: 'oklch(0.22 0.02 280)' }}>
                   {currentGame.rules}
                 </p>
               </div>
@@ -552,11 +555,10 @@ export default function StagePage() {
             {/* 结算区域 */}
             <div className="grid grid-cols-2 gap-4">
               {/* 胜者结算 */}
-              <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, rgba(102,187,106,0.1), rgba(38,198,218,0.06))', border: '1.5px solid rgba(102,187,106,0.25)' }}>
+              <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, rgba(102,187,106,0.12), rgba(38,198,218,0.08))', border: '2px solid rgba(102,187,106,0.35)' }}>
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <span className="text-lg">🏆</span>
-                    <span className="text-sm font-bold" style={{ color: '#388e3c' }}>胜者结算</span>
+                    <span className="text-base font-black" style={{ color: '#2e7d32' }}>🏆 胜者 · 周边奖励</span>
                   </div>
                   <button
                     onClick={() => setActiveModal({ type: 'settle', settlement: 'winner' })}
@@ -566,16 +568,15 @@ export default function StagePage() {
                   </button>
                 </div>
                 {currentGame.winnerSettlement && (
-                  <p className="text-sm" style={{ color: 'oklch(0.30 0.04 155)' }}>{currentGame.winnerSettlement}</p>
+                  <p className="text-xl font-bold mt-1" style={{ color: 'oklch(0.25 0.06 155)' }}>{currentGame.winnerSettlement}</p>
                 )}
               </div>
 
               {/* 败者结算 */}
-              <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, rgba(244,143,177,0.1), rgba(206,147,216,0.06))', border: '1.5px solid rgba(244,143,177,0.25)' }}>
+              <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, rgba(244,143,177,0.12), rgba(206,147,216,0.08))', border: '2px solid rgba(244,143,177,0.35)' }}>
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <span className="text-lg">💧</span>
-                    <span className="text-sm font-bold" style={{ color: '#c2185b' }}>败者结算</span>
+                    <span className="text-base font-black" style={{ color: '#b71c1c' }}>💧 败者 · 惩罚</span>
                   </div>
                   <button
                     onClick={() => setActiveModal({ type: 'settle', settlement: 'loser' })}
@@ -585,7 +586,7 @@ export default function StagePage() {
                   </button>
                 </div>
                 {currentGame.loserSettlement && (
-                  <p className="text-sm" style={{ color: 'oklch(0.35 0.08 340)' }}>{currentGame.loserSettlement}</p>
+                  <p className="text-xl font-bold mt-1" style={{ color: 'oklch(0.30 0.08 340)' }}>{currentGame.loserSettlement}</p>
                 )}
               </div>
             </div>

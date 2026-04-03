@@ -540,22 +540,22 @@ function IdentityEditor({ players, dispatch }: { players: PlayerIdentity[]; disp
               {/* 性别 */}
               <div className="flex gap-1">
                 <button onClick={() => updatePlayer(player, { gender: player.gender === 'male' ? 'unknown' : 'male' })} className="flex-1 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer"
-                  style={player.gender === 'male' ? { background: 'linear-gradient(135deg,#42a5f5,#1976d2)', color: 'white', border: '2px solid #42a5f5', boxShadow: '0 2px 8px rgba(66,165,245,0.4)' } : { background: 'rgba(220,235,255,0.9)', color: '#1976d2', border: '2px solid rgba(66,165,245,0.5)', fontWeight: 800 }}>
+                  style={player.gender === 'male' ? { background: 'linear-gradient(135deg,#42a5f5,#1976d2)', color: 'white', border: '2px solid #42a5f5', boxShadow: '0 2px 8px rgba(66,165,245,0.4)' } : { background: 'rgba(245,245,250,0.9)', color: '#999', border: '1.5px solid rgba(200,200,210,0.6)' }}>
                   男
                 </button>
                 <button onClick={() => updatePlayer(player, { gender: player.gender === 'female' ? 'unknown' : 'female' })} className="flex-1 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer"
-                  style={player.gender === 'female' ? { background: 'linear-gradient(135deg,#f48fb1,#e91e63)', color: 'white', border: '2px solid #f48fb1', boxShadow: '0 2px 8px rgba(244,143,177,0.4)' } : { background: 'rgba(255,230,245,0.9)', color: '#e91e63', border: '2px solid rgba(233,30,99,0.45)', fontWeight: 800 }}>
+                  style={player.gender === 'female' ? { background: 'linear-gradient(135deg,#f48fb1,#e91e63)', color: 'white', border: '2px solid #f48fb1', boxShadow: '0 2px 8px rgba(244,143,177,0.4)' } : { background: 'rgba(245,245,250,0.9)', color: '#999', border: '1.5px solid rgba(200,200,210,0.6)' }}>
                   女
                 </button>
               </div>
               {/* 社交 */}
               <div className="flex gap-1">
                 <button onClick={() => updatePlayer(player, { socialType: player.socialType === 'extrovert' ? 'unknown' : 'extrovert' })} className="flex-1 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer"
-                  style={player.socialType === 'extrovert' ? { background: 'linear-gradient(135deg,#ffca28,#ff8a65)', color: 'white', border: '2px solid #ffca28', boxShadow: '0 2px 8px rgba(255,202,40,0.4)' } : { background: 'rgba(255,248,220,0.9)', color: '#e65100', border: '2px solid rgba(255,138,0,0.5)', fontWeight: 800 }}>
+                  style={player.socialType === 'extrovert' ? { background: 'linear-gradient(135deg,#ffca28,#ff8a65)', color: 'white', border: '2px solid #ffca28', boxShadow: '0 2px 8px rgba(255,202,40,0.4)' } : { background: 'rgba(245,245,250,0.9)', color: '#999', border: '1.5px solid rgba(200,200,210,0.6)' }}>
                   社牛
                 </button>
                 <button onClick={() => updatePlayer(player, { socialType: player.socialType === 'introvert' ? 'unknown' : 'introvert' })} className="flex-1 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer"
-                  style={player.socialType === 'introvert' ? { background: 'linear-gradient(135deg,#9fa8da,#7c4dff)', color: 'white', border: '2px solid #9fa8da', boxShadow: '0 2px 8px rgba(159,168,218,0.4)' } : { background: 'rgba(240,238,255,0.9)', color: '#7c4dff', border: '2px solid rgba(124,77,255,0.5)', fontWeight: 800 }}>
+                  style={player.socialType === 'introvert' ? { background: 'linear-gradient(135deg,#9fa8da,#7c4dff)', color: 'white', border: '2px solid #9fa8da', boxShadow: '0 2px 8px rgba(159,168,218,0.4)' } : { background: 'rgba(245,245,250,0.9)', color: '#999', border: '1.5px solid rgba(200,200,210,0.6)' }}>
                   社恐
                 </button>
               </div>
@@ -627,6 +627,27 @@ export default function ConsolePage() {
   const [activeTab, setActiveTab] = useState<ConsoleTab>('games');
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [showLibrary, setShowLibrary] = useState(false);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
+  const handleDragStart = (e: React.DragEvent, idx: number) => {
+    setDragIndex(idx);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+  const handleDragOver = (e: React.DragEvent, idx: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverIndex(idx);
+  };
+  const handleDrop = (idx: number) => {
+    if (dragIndex === null || dragIndex === idx) { setDragIndex(null); setDragOverIndex(null); return; }
+    const list = [...state.currentGameList];
+    const [moved] = list.splice(dragIndex, 1);
+    list.splice(idx, 0, moved);
+    dispatch({ type: 'REORDER_GAME_LIST', payload: list });
+    setDragIndex(null); setDragOverIndex(null);
+  };
+  const handleDragEnd = () => { setDragIndex(null); setDragOverIndex(null); };
 
   const selectedItem = state.currentGameList.find(item => item.id === selectedItemId);
 
@@ -715,9 +736,20 @@ export default function ConsolePage() {
               {state.currentGameList.map((item, idx) => {
                 const isSelected = item.id === selectedItemId;
                 return (
-                  <div key={item.id} onClick={() => setSelectedItemId(item.id)}
+                  <div key={item.id}
+                    draggable
+                    onDragStart={e => handleDragStart(e, idx)}
+                    onDragOver={e => handleDragOver(e, idx)}
+                    onDrop={() => handleDrop(idx)}
+                    onDragEnd={handleDragEnd}
+                    onClick={() => setSelectedItemId(item.id)}
                     className="flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-all group"
-                    style={isSelected ? { background: 'linear-gradient(135deg, rgba(236,64,122,0.1), rgba(124,77,255,0.1))', border: '1.5px solid rgba(124,77,255,0.25)' } : { background: 'rgba(255,255,255,0.6)', border: '1.5px solid rgba(200,180,240,0.2)' }}>
+                    style={dragOverIndex === idx && dragIndex !== idx
+                      ? { background: 'linear-gradient(135deg, rgba(66,165,245,0.15), rgba(38,198,218,0.15))', border: '1.5px dashed rgba(66,165,245,0.5)', transform: 'scale(1.01)' }
+                      : isSelected
+                        ? { background: 'linear-gradient(135deg, rgba(236,64,122,0.1), rgba(124,77,255,0.1))', border: '1.5px solid rgba(124,77,255,0.25)', opacity: dragIndex === idx ? 0.4 : 1 }
+                        : { background: 'rgba(255,255,255,0.6)', border: '1.5px solid rgba(200,180,240,0.2)', opacity: dragIndex === idx ? 0.4 : 1 }}>
+                    <span className="text-gray-300 text-xs mr-0.5 flex-shrink-0 cursor-grab select-none">⠿</span>
                     <span className="w-6 h-6 rounded-lg flex items-center justify-center text-xs font-black text-white flex-shrink-0" style={{ background: isSelected ? 'linear-gradient(135deg,#ec407a,#7c4dff)' : 'rgba(200,180,240,0.3)' }}>{idx + 1}</span>
                     <span className="flex-1 text-sm font-semibold truncate" style={{ color: isSelected ? 'oklch(0.22 0.02 280)' : 'oklch(0.40 0.04 280)' }}>{item.gameData.name}</span>
                     <button onClick={(e) => { e.stopPropagation(); dispatch({ type: 'REMOVE_GAME_FROM_LIST', payload: item.id }); if (selectedItemId === item.id) setSelectedItemId(null); }}

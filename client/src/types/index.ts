@@ -1,14 +1,13 @@
 // ============================================================
 // 奇妙奇遇游戏控制台 - 核心数据类型定义
-// Design: Professional Dark Dashboard
 // ============================================================
 
 // ---- 标签 ----
 export interface GameTag {
   id: string;
   name: string;
-  color: string; // hex color
-  isSystem?: boolean; // 系统内置标签（如"周边"）
+  color: string;
+  isSystem?: boolean;
 }
 
 // ---- 工具绑定 ----
@@ -25,7 +24,7 @@ export interface BoundTool {
 export interface SettlementImage {
   id: string;
   name: string;
-  dataUrl: string; // base64 data URL for local storage
+  dataUrl: string;
 }
 
 // ---- 游戏 ----
@@ -37,7 +36,7 @@ export interface Game {
   loserSettlement: string;
   settlementImages: SettlementImage[];
   tools: BoundTool[];
-  tags: string[]; // tag ids
+  tags: string[];
   notes: string;
   createdAt: number;
   updatedAt: number;
@@ -45,10 +44,10 @@ export interface Game {
 
 // ---- 游戏列表项（当天场次） ----
 export interface GameListItem {
-  id: string; // unique list item id
-  gameId: string; // reference to game (or embedded game data)
+  id: string;
+  gameId: string;
   order: number;
-  gameData: Game; // snapshot of game data at time of adding
+  gameData: Game;
 }
 
 // ---- 身份信息 ----
@@ -57,7 +56,7 @@ export type SocialType = 'introvert' | 'extrovert' | 'unknown';
 
 export interface PlayerIdentity {
   id: string;
-  number: number; // 身份卡号码 1-N
+  number: number;
   gender: Gender;
   socialType: SocialType;
   notes?: string;
@@ -69,8 +68,8 @@ export interface WheelOption {
   label: string;
   weight: number;
   color: string;
-  isPeripheral: boolean; // 是否属于"周边"
-  image?: string; // optional image dataUrl
+  isPeripheral: boolean;
+  image?: string; // base64 dataUrl
   notes?: string;
 }
 
@@ -95,51 +94,41 @@ export interface Wheel {
   updatedAt: number;
 }
 
-// ---- 周边清单记录 ----
-export type PeripheralSource = 'game-settlement' | 'wheel-result' | 'manual';
+// ---- 结算清单记录 ----
+// category: 'reward' = 胜者周边奖励, 'penalty' = 败者惩罚
+export type SettlementCategory = 'reward' | 'penalty';
+export type SettlementSource = 'game-winner' | 'game-loser' | 'wheel-result' | 'manual';
 
-export interface PeripheralRecord {
+export interface SettlementRecord {
   id: string;
-  serialNumber: number; // 序号
-  playerNumber: number; // 身份卡号码
-  peripheralCode: string; // 周边编号
-  previewImage?: string; // 周边预览图
+  serialNumber: number;
+  playerNumber: number;           // 身份卡号
+  category: SettlementCategory;   // reward | penalty
+  title: string;                  // 周边名称 / 惩罚内容
+  previewImage?: string;          // 预览图 base64
   notes: string;
-  completed: boolean; // 订单完成状态
-  source: PeripheralSource;
+  completed: boolean;
+  source: SettlementSource;
   sourceGameName?: string;
   sourceWheelName?: string;
   sourceWheelOption?: string;
   createdAt: number;
 }
 
+// ---- 向后兼容别名 ----
+export type PeripheralRecord = SettlementRecord;
+export type PeripheralSource = SettlementSource;
+
 // ---- 全局应用状态 ----
 export interface AppState {
-  // 游戏库
   gameLibrary: Game[];
-  
-  // 当天游戏列表
   currentGameList: GameListItem[];
-  
-  // 展台当前选中游戏
   stageCurrentGameId: string | null;
-  
-  // 标签库
   tags: GameTag[];
-  
-  // 身份信息
   players: PlayerIdentity[];
-  
-  // 轮盘
   wheels: Wheel[];
-  
-  // 周边清单
-  peripheralRecords: PeripheralRecord[];
-  
-  // 展台名称显示开关
+  peripheralRecords: SettlementRecord[];
   stageShowGameNames: boolean;
-  
-  // 上次更新时间
   lastUpdated: number;
 }
 

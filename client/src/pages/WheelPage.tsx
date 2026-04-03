@@ -174,70 +174,69 @@ function PickPlayerModal({ players, onConfirm, onClose }: { players: PlayerIdent
 }
 
 function OptionRow({ opt, onChange, onRemove, canRemove }: { opt: WheelOption; onChange: (u: WheelOption) => void; onRemove: () => void; canRemove: boolean }) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 3 * 1024 * 1024) { toast.error('图片不能超过 3MB'); return; }
+    const reader = new FileReader();
+    reader.onload = ev => onChange({ ...opt, image: ev.target?.result as string });
+    reader.readAsDataURL(file);
+  };
   return (
-    <div className="flex items-center gap-2 p-2.5 rounded-xl" style={{ background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(200,180,240,0.2)' }}>
-      <div className="relative flex-shrink-0 w-7 h-7 rounded-lg" style={{ background: opt.color }}>
-        <input type="color" value={opt.color} onChange={e => onChange({ ...opt, color: e.target.value })}
-          className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
+    <div className="flex flex-col gap-1.5 p-2.5 rounded-xl" style={{ background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(200,180,240,0.2)' }}>
+      <div className="flex items-center gap-2">
+        <div className="relative flex-shrink-0 w-7 h-7 rounded-lg" style={{ background: opt.color }}>
+          <input type="color" value={opt.color} onChange={e => onChange({ ...opt, color: e.target.value })}
+            className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
+        </div>
+        <input type="text" value={opt.label} onChange={e => onChange({ ...opt, label: e.target.value })}
+          className="flex-1 px-2 py-1 rounded-lg text-sm font-medium bg-transparent border-none outline-none"
+          style={{ color: 'oklch(0.22 0.02 280)' }} placeholder="选项名称" />
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <button onClick={() => onChange({ ...opt, weight: Math.max(1, opt.weight - 1) })}
+            className="w-5 h-5 rounded-md text-xs font-bold flex items-center justify-center"
+            style={{ background: 'rgba(200,180,240,0.3)', color: 'oklch(0.45 0.06 280)' }}>-</button>
+          <span className="w-5 text-center text-xs font-bold" style={{ color: 'oklch(0.35 0.04 280)' }}>{opt.weight}</span>
+          <button onClick={() => onChange({ ...opt, weight: opt.weight + 1 })}
+            className="w-5 h-5 rounded-md text-xs font-bold flex items-center justify-center"
+            style={{ background: 'rgba(200,180,240,0.3)', color: 'oklch(0.45 0.06 280)' }}>+</button>
+        </div>
+        <button onClick={() => onChange({ ...opt, isPeripheral: !opt.isPeripheral })}
+          className="px-2 py-1 rounded-lg text-xs font-bold flex-shrink-0 transition-all"
+          style={opt.isPeripheral
+            ? { background: 'linear-gradient(135deg,#f59e0b,#f97316)', color: 'white', boxShadow: '0 2px 6px rgba(245,158,11,0.35)' }
+            : { background: 'rgba(200,180,240,0.15)', color: 'oklch(0.55 0.04 280)', border: '1px solid rgba(200,180,240,0.3)' }}>
+          ★周边
+        </button>
+        {canRemove && (
+          <button onClick={onRemove} className="w-6 h-6 rounded-md flex items-center justify-center text-sm flex-shrink-0"
+            style={{ color: '#ef4444', background: 'rgba(239,68,68,0.1)' }}>×</button>
+        )}
       </div>
-      <input type="text" value={opt.label} onChange={e => onChange({ ...opt, label: e.target.value })}
-        className="flex-1 px-2 py-1 rounded-lg text-sm font-medium bg-transparent border-none outline-none"
-        style={{ color: 'oklch(0.22 0.02 280)' }} placeholder="选项名称" />
-      <div className="flex items-center gap-1 flex-shrink-0">
-        <button onClick={() => onChange({ ...opt, weight: Math.max(1, opt.weight - 1) })}
-          className="w-5 h-5 rounded-md text-xs font-bold flex items-center justify-center"
-          style={{ background: 'rgba(200,180,240,0.3)', color: 'oklch(0.45 0.06 280)' }}>-</button>
-        <span className="w-5 text-center text-xs font-bold" style={{ color: 'oklch(0.35 0.04 280)' }}>{opt.weight}</span>
-        <button onClick={() => onChange({ ...opt, weight: opt.weight + 1 })}
-          className="w-5 h-5 rounded-md text-xs font-bold flex items-center justify-center"
-          style={{ background: 'rgba(200,180,240,0.3)', color: 'oklch(0.45 0.06 280)' }}>+</button>
+      {/* 图片上传 */}
+      <div className="flex items-center gap-2 pl-9">
+        <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+        {opt.image ? (
+          <div className="flex items-center gap-2">
+            <img src={opt.image} alt="选项图片" className="w-8 h-8 rounded-lg object-cover"
+              style={{ border: '1px solid rgba(200,180,240,0.3)' }} />
+            <button onClick={() => onChange({ ...opt, image: undefined })}
+              className="text-xs px-2 py-0.5 rounded-md"
+              style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}>移除图片</button>
+          </div>
+        ) : (
+          <button onClick={() => fileRef.current?.click()}
+            className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg transition-all"
+            style={{ background: 'rgba(200,180,240,0.15)', color: 'oklch(0.55 0.04 280)', border: '1px dashed rgba(200,180,240,0.4)' }}>
+            📷 添加图片（抽中时展示）
+          </button>
+        )}
       </div>
-      <button onClick={() => onChange({ ...opt, isPeripheral: !opt.isPeripheral })}
-        className="px-2 py-1 rounded-lg text-xs font-bold flex-shrink-0 transition-all"
-        style={opt.isPeripheral
-          ? { background: 'linear-gradient(135deg,#f59e0b,#f97316)', color: 'white', boxShadow: '0 2px 6px rgba(245,158,11,0.35)' }
-          : { background: 'rgba(200,180,240,0.15)', color: 'oklch(0.55 0.04 280)' }}>
-        ★周边
-      </button>
-      {canRemove && (
-        <button onClick={onRemove} className="w-6 h-6 rounded-md flex items-center justify-center text-sm flex-shrink-0"
-          style={{ color: '#ef4444', background: 'rgba(239,68,68,0.1)' }}>×</button>
-      )}
     </div>
   );
 }
 
-function ResultModal({ option, playerNumbers, onClose }: { option: WheelOption; playerNumbers: number[]; onClose: () => void }) {
-  return (
-    <div className="tool-modal-backdrop" onClick={onClose}>
-      <div className="tool-modal p-8 text-center max-w-sm" onClick={e => e.stopPropagation()}>
-        <div className="text-5xl mb-4">{option.isPeripheral ? '🎁' : '🎯'}</div>
-        <div className="text-3xl font-black mb-3" style={{ color: option.color }}>{option.label}</div>
-        {option.isPeripheral && (
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold mb-4"
-            style={{ background: 'rgba(245,158,11,0.1)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.3)' }}>
-            ★ 已同步至周边清单
-          </div>
-        )}
-        {playerNumbers.length > 0 && (
-          <div className="mb-4">
-            <div className="text-xs font-semibold mb-2" style={{ color: 'oklch(0.55 0.04 280)' }}>参与玩家</div>
-            <div className="flex flex-wrap gap-2 justify-center">
-              {playerNumbers.map(n => (
-                <span key={n} className="w-9 h-9 rounded-xl flex items-center justify-center font-black text-white text-sm"
-                  style={{ background: 'linear-gradient(135deg,#ec407a,#7c4dff)' }}>{n}</span>
-              ))}
-            </div>
-          </div>
-        )}
-        <button onClick={onClose} className="w-full py-3 rounded-2xl font-bold text-white"
-          style={{ background: 'linear-gradient(135deg,#ec407a,#7c4dff)', boxShadow: '0 4px 14px rgba(124,77,255,0.3)' }}>
-          好的！
-        </button>
-      </div>
-    </div>
-  );
-}
 
 export default function WheelPage() {
   useEnsureDefaultWheels();
@@ -286,12 +285,12 @@ export default function WheelPage() {
     const targetRotation = -Math.PI / 2 - winnerMidAngle + 2 * Math.PI * spins;
     const startRot = rotRef.current;
     const totalDelta = targetRotation - (startRot % (2 * Math.PI)) + 2 * Math.PI * spins;
-    const duration = 4000 + Math.random() * 1000;
+    const duration = 2000 + Math.random() * 400;
     const startTime = performance.now();
     const animate = (now: number) => {
       const elapsed = now - startTime;
       const progress = Math.min(elapsed / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 3);
+      const eased = 1 - Math.pow(1 - progress, 4);
       rotRef.current = startRot + totalDelta * eased;
       setRotation(rotRef.current);
       if (progress < 1) { animRef.current = requestAnimationFrame(animate); }
@@ -304,21 +303,24 @@ export default function WheelPage() {
           playerNumbers: playerNums, timestamp: Date.now(), isPeripheral: winner.isPeripheral,
         };
         dispatch({ type: 'UPDATE_WHEEL', payload: { ...activeWheel, history: [entry, ...activeWheel.history].slice(0, 50), updatedAt: Date.now() } });
-        if (winner.isPeripheral && playerNums.length > 0) {
+        if (winner.isPeripheral) {
+          const targets = playerNums.length > 0 ? playerNums : [0];
           const maxSerial = state.peripheralRecords.reduce((max, r) => Math.max(max, r.serialNumber), 0);
-          playerNums.forEach((num, i) => {
+          targets.forEach((num, i) => {
             dispatch({
               type: 'ADD_PERIPHERAL_RECORD',
               payload: {
                 id: nanoid(), serialNumber: maxSerial + i + 1, playerNumber: num,
-                peripheralCode: `W-${String(maxSerial + i + 1).padStart(4, '0')}`,
-                previewImage: winner.image, notes: `${activeWheel.name} · ${winner.label}`,
-                completed: false, source: 'wheel-result',
+                category: 'reward' as const,
+                title: winner.label,
+                previewImage: winner.image,
+                notes: `${activeWheel.name} · ${winner.label}`,
+                completed: false, source: 'wheel-result' as const,
                 sourceWheelName: activeWheel.name, sourceWheelOption: winner.label, createdAt: Date.now(),
               },
             });
           });
-          toast.success(`"${winner.label}" 已同步至周边清单`);
+          toast.success(`“${winner.label}” 已同步至结算清单`);
         }
       }
     };
@@ -499,28 +501,70 @@ export default function WheelPage() {
             )}
           </div>
 
-          {/* 右侧配置面板 */}
-          {showConfig && (
-            <div className="w-72 flex-shrink-0 flex flex-col overflow-hidden"
+          {/* 右侧面板：结果 或 配置 */}
+          {(resultOption || showConfig) && (
+            <div className="w-80 flex-shrink-0 flex flex-col overflow-hidden"
               style={{ background: 'rgba(255,255,255,0.55)', backdropFilter: 'blur(16px)', borderLeft: '1px solid rgba(200,180,240,0.25)' }}>
-              <div className="px-4 py-3 flex-shrink-0 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(200,180,240,0.2)' }}>
-                <span className="text-xs font-bold" style={{ color: 'oklch(0.50 0.06 310)' }}>选项配置 · {activeWheel.options.length}项</span>
-                <button onClick={handleAddOption} className="px-2 py-1 rounded-lg text-xs font-bold"
-                  style={{ background: 'linear-gradient(135deg,#66bb6a,#26c6da)', color: 'white' }}>+ 添加</button>
-              </div>
-              <div className="flex-1 overflow-y-auto p-3 space-y-2">
-                {activeWheel.options.map(opt => (
-                  <OptionRow key={opt.id} opt={opt}
-                    onChange={updated => handleUpdateOption(opt.id, updated)}
-                    onRemove={() => handleRemoveOption(opt.id)}
-                    canRemove={activeWheel.options.length > 2} />
-                ))}
-              </div>
-              <div className="px-4 py-3 flex-shrink-0" style={{ borderTop: '1px solid rgba(200,180,240,0.2)' }}>
-                <div className="text-xs" style={{ color: 'oklch(0.60 0.04 280)' }}>
-                  <span className="font-bold" style={{ color: '#f59e0b' }}>★周边</span> 标记的选项抽中后自动同步至周边清单
+              {/* 结果展示（优先） */}
+              {resultOption ? (
+                <div className="flex flex-col items-center justify-center flex-1 p-6 gap-4">
+                  <div className="text-xs font-bold px-3 py-1 rounded-full"
+                    style={{ background: 'linear-gradient(135deg,rgba(236,64,122,0.1),rgba(124,77,255,0.1))', color: '#ec407a' }}>
+                    🎯 抽中结果
+                  </div>
+                  {resultOption.image && (
+                    <img src={resultOption.image} alt={resultOption.label}
+                      className="w-36 h-36 rounded-2xl object-cover"
+                      style={{ border: `3px solid ${resultOption.color}`, boxShadow: `0 8px 24px ${resultOption.color}44` }} />
+                  )}
+                  <div className="text-4xl font-black text-center leading-tight" style={{ color: resultOption.color }}>
+                    {resultOption.label}
+                  </div>
+                  {resultOption.isPeripheral && (
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold"
+                      style={{ background: 'rgba(245,158,11,0.12)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.3)' }}>
+                      ★ 已同步至结算清单
+                    </div>
+                  )}
+                  {resultPlayers.length > 0 && (
+                    <div className="w-full">
+                      <div className="text-xs font-semibold mb-2 text-center" style={{ color: 'oklch(0.55 0.04 280)' }}>参与玩家</div>
+                      <div className="flex flex-wrap gap-2 justify-center">
+                        {resultPlayers.map(n => (
+                          <span key={n} className="w-9 h-9 rounded-xl flex items-center justify-center font-black text-white text-sm"
+                            style={{ background: 'linear-gradient(135deg,#ec407a,#7c4dff)' }}>{n}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <button onClick={() => { setResultOption(null); setResultPlayers([]); }}
+                    className="w-full py-2.5 rounded-xl font-bold text-sm"
+                    style={{ background: 'rgba(200,180,240,0.2)', color: 'oklch(0.45 0.06 280)' }}>
+                    关闭结果
+                  </button>
                 </div>
-              </div>
+              ) : showConfig ? (
+                <>
+                  <div className="px-4 py-3 flex-shrink-0 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(200,180,240,0.2)' }}>
+                    <span className="text-xs font-bold" style={{ color: 'oklch(0.50 0.06 310)' }}>选项配置 · {activeWheel.options.length}项</span>
+                    <button onClick={handleAddOption} className="px-2 py-1 rounded-lg text-xs font-bold"
+                      style={{ background: 'linear-gradient(135deg,#66bb6a,#26c6da)', color: 'white' }}>+ 添加</button>
+                  </div>
+                  <div className="flex-1 overflow-y-auto p-3 space-y-2">
+                    {activeWheel.options.map(opt => (
+                      <OptionRow key={opt.id} opt={opt}
+                        onChange={updated => handleUpdateOption(opt.id, updated)}
+                        onRemove={() => handleRemoveOption(opt.id)}
+                        canRemove={activeWheel.options.length > 2} />
+                    ))}
+                  </div>
+                  <div className="px-4 py-3 flex-shrink-0" style={{ borderTop: '1px solid rgba(200,180,240,0.2)' }}>
+                    <div className="text-xs" style={{ color: 'oklch(0.60 0.04 280)' }}>
+                      <span className="font-bold" style={{ color: '#f59e0b' }}>★周边</span> 标记的选项抽中后自动同步至结算清单
+                    </div>
+                  </div>
+                </>
+              ) : null}
             </div>
           )}
         </div>
@@ -532,10 +576,7 @@ export default function WheelPage() {
           onConfirm={nums => { setShowPickModal(false); doSpin(nums); }}
           onClose={() => setShowPickModal(false)} />
       )}
-      {resultOption && (
-        <ResultModal option={resultOption} playerNumbers={resultPlayers}
-          onClose={() => { setResultOption(null); setResultPlayers([]); }} />
-      )}
+
     </div>
   );
 }

@@ -32,7 +32,7 @@ const NAV_ITEMS = [
   },
   {
     path: '/peripheral',
-    label: '周边',
+    label: '结算',
     emoji: '🎁',
     gradient: 'linear-gradient(135deg, #66bb6a, #26c6da)',
     shadow: 'rgba(102, 187, 106, 0.35)',

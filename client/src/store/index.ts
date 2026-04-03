@@ -12,6 +12,7 @@ import {
   Wheel,
   WheelOption,
   PeripheralRecord,
+  SettlementCategory,
   BoundTool,
   SettlementImage,
 } from '../types';
@@ -165,16 +166,16 @@ export function updateGameInCurrentList(state: AppState, itemId: string, gameDat
   };
 }
 
-// ---- 周边记录操作 ----
-let peripheralCounter = 1;
-
+// ---- 结算记录操作 ----
 export function addPeripheralRecord(
   state: AppState,
   playerNumber: number,
   source: PeripheralRecord['source'],
   options: {
-    peripheralCode?: string;
+    category?: SettlementCategory;
+    title?: string;
     previewImage?: string;
+    notes?: string;
     sourceGameName?: string;
     sourceWheelName?: string;
     sourceWheelOption?: string;
@@ -185,9 +186,10 @@ export function addPeripheralRecord(
     id: nanoid(),
     serialNumber: maxSerial + 1,
     playerNumber,
-    peripheralCode: options.peripheralCode || `P-${String(maxSerial + 1).padStart(4, '0')}`,
+    category: options.category || 'reward',
+    title: options.title || '',
     previewImage: options.previewImage,
-    notes: '',
+    notes: options.notes || '',
     completed: false,
     source,
     sourceGameName: options.sourceGameName,
