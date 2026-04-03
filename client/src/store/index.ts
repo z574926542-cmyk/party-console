@@ -3,6 +3,7 @@
 // ============================================================
 
 import { nanoid } from 'nanoid';
+import { saveImage, loadImage } from '../lib/imageStore';
 import {
   AppState,
   Game,
@@ -378,31 +379,52 @@ export function exportGameLibrary(state: AppState): string {
 }
 
 // 导出单个游戏为 JSON模板（包含周边图片 dataUrl）
-export function exportSingleGame(game: Game): string {
-  return JSON.stringify({ version: 1, type: 'game-template', game }, null, 2);
+// 导出单个游戏（异步，嵌入周边图片 base64）
+export async function exportSingleGame(game: Game): Promise<string> {
+  // 从 IndexedDB 读取所有周边图片的 base64
+  const imagesWithData = await Promise.all(
+    (game.settlementImages || []).map(async (img) => {
+      let dataUrl = img.dataUrl || null;
+      // 如果内存中没有，尝试从 IndexedDB 读取
+      if (!dataUrl && img.imageId) {
+        dataUrl = await loadImage(img.imageId);
+      }
+      return { ...img, dataUrl: dataUrl || undefined };
+    })
+  );
+  const gameWithImages = { ...game, settlementImages: imagesWithData };
+  return JSON.stringify({ version: 1, type: 'game-template', game: gameWithImages }, null, 2);
 }
 
-// 解析单个游戏 JSON模板
-export function parseSingleGameJSON(json: string): Game | null {
+// 解析单个游戏 JSON模板（异步，导入时将图片 base64 写回 IndexedDB）
+export async function parseSingleGameJSON(json: string): Promise<Game | null> {
   try {
     const data = JSON.parse(json);
     // 支持两种格式：{ game: ... } 或直接是 Game 对象
     const raw = data.game || data;
     if (!raw || !raw.name) return null;
+    // 处理周边图片：将 base64 写入 IndexedDB
+    const settlementImages = await Promise.all(
+      (Array.isArray(raw.settlementImages) ? raw.settlementImages : []).map(async (img: any) => {
+        const newId = nanoid();
+        if (img.dataUrl) {
+          await saveImage(newId, img.dataUrl);
+        }
+        return {
+          id: img.id || nanoid(),
+          name: img.name || '',
+          dataUrl: img.dataUrl || undefined,
+          imageId: img.dataUrl ? newId : img.imageId,
+        };
+      })
+    );
     return {
-      id: raw.id || nanoid(),
+      id: nanoid(), // 导入时分配新 ID 避免冲突
       name: raw.name || '导入游戏',
       rules: raw.rules || '',
       winnerSettlement: raw.winnerSettlement || '',
       loserSettlement: raw.loserSettlement || '',
-      settlementImages: Array.isArray(raw.settlementImages)
-        ? raw.settlementImages.map((img: any) => ({
-            id: img.id || nanoid(),
-            name: img.name || '',
-            dataUrl: img.dataUrl,
-            imageId: img.imageId,
-          }))
-        : [],
+      settlementImages,
       tools: Array.isArray(raw.tools) ? raw.tools : [],
       tags: Array.isArray(raw.tags) ? raw.tags : [],
       notes: raw.notes || '',
@@ -414,27 +436,36 @@ export function parseSingleGameJSON(json: string): Game | null {
   }
 }
 
-// 解析单个轮盘 JSON模板
-export function parseSingleWheelJSON(json: string): Wheel | null {
+// 解析单个轮盘 JSON模板（异步，导入时将图片 base64 写入 IndexedDB）
+export async function parseSingleWheelJSON(json: string): Promise<Wheel | null> {
   try {
     const data = JSON.parse(json);
     const raw = data.wheel || data;
     if (!raw || !raw.name) return null;
+    const options = await Promise.all(
+      (Array.isArray(raw.options) ? raw.options : []).map(async (o: any) => {
+        const newId = nanoid();
+        // 如果选项嵌入了 base64 图片，写入 IndexedDB
+        if (o.imageDataUrl) {
+          await saveImage(newId, o.imageDataUrl);
+        }
+        return {
+          id: nanoid(),
+          label: o.label || '',
+          weight: typeof o.weight === 'number' ? o.weight : 1,
+          color: o.color || '#6366f1',
+          isPeripheral: Boolean(o.isPeripheral),
+          isPenalty: Boolean(o.isPenalty),
+          imageDataUrl: o.imageDataUrl || undefined,
+          imageId: o.imageDataUrl ? newId : (o.imageId || undefined),
+          notes: o.notes || '',
+        };
+      })
+    );
     return {
-      id: nanoid(), // 导入时分配新 ID 避免冲突
+      id: nanoid(),
       name: raw.name || '导入轮盘',
-      options: Array.isArray(raw.options)
-        ? raw.options.map((o: any) => ({
-            id: nanoid(),
-            label: o.label || '',
-            weight: typeof o.weight === 'number' ? o.weight : 1,
-            color: o.color || '#6366f1',
-            isPeripheral: Boolean(o.isPeripheral),
-            isPenalty: Boolean(o.isPenalty),
-            imageDataUrl: o.imageDataUrl,
-            notes: o.notes || '',
-          }))
-        : [],
+      options,
       history: [],
       isDefault: false,
       createdAt: Date.now(),
@@ -445,10 +476,20 @@ export function parseSingleWheelJSON(json: string): Wheel | null {
   }
 }
 
-// 导出单个轮盘为 JSON模板
-export function exportSingleWheel(wheel: Wheel): string {
-  // 轮盘选项图片包含 imageDataUrl（运行时缓存）
-  return JSON.stringify({ version: 1, type: 'wheel-template', wheel }, null, 2);
+// 导出单个轮盘为 JSON模板（异步，嵌入图片 base64）
+export async function exportSingleWheel(wheel: Wheel): Promise<string> {
+  // 轮盘选项图片：imageDataUrl 已在运行时内存中，如果没有则尝试从 IndexedDB 读取
+  const optionsWithImages = await Promise.all(
+    (wheel.options || []).map(async (opt) => {
+      let imageDataUrl = opt.imageDataUrl || null;
+      if (!imageDataUrl && (opt as any).imageId) {
+        imageDataUrl = await loadImage((opt as any).imageId);
+      }
+      return { ...opt, imageDataUrl: imageDataUrl || undefined };
+    })
+  );
+  const wheelWithImages = { ...wheel, options: optionsWithImages };
+  return JSON.stringify({ version: 1, type: 'wheel-template', wheel: wheelWithImages }, null, 2);
 }
 
 export function exportWheels(state: AppState): string {

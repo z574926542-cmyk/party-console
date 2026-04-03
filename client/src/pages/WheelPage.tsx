@@ -369,32 +369,37 @@ export default function WheelPage() {
     setActiveWheelId(DEFAULT_IDS[0]);
   };
 
-  // 导出当前轮盘为 JSON
-  const handleExportWheel = (wheel: Wheel) => {
-    const json = exportSingleWheel(wheel);
-    const blob = new Blob([json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${wheel.name.replace(/[/\\?%*:|"<>]/g, '_')}.wheel.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success(`「${wheel.name}」已导出为JSON模板`);
+  // 导出当前轮盘为 JSON（异步，嵌入图片 base64）
+  const handleExportWheel = async (wheel: Wheel) => {
+    try {
+      const json = await exportSingleWheel(wheel);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${wheel.name.replace(/[/\\?%*:|"<>]/g, '_')}.wheel.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(`「${wheel.name}」已导出为JSON模板（含图片数据）`);
+    } catch {
+      toast.error('导出失败，请重试');
+    }
   };
 
-  // 上传 JSON 导入轮盘
+  // 上传 JSON 导入轮盘（异步，将图片写入 IndexedDB）
   const wheelImportRef = useRef<HTMLInputElement>(null);
   const handleImportWheelFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = ev => {
+    reader.onload = async ev => {
       const json = ev.target?.result as string;
-      const wheel = parseSingleWheelJSON(json);
+      const wheel = await parseSingleWheelJSON(json);
       if (!wheel) { toast.error('文件格式不正确，无法解析轮盘数据'); return; }
       dispatch({ type: 'ADD_WHEEL', payload: wheel });
       setActiveWheelId(wheel.id);
-      toast.success(`「${wheel.name}」已导入`);
+      const imgCount = wheel.options.filter(o => o.imageDataUrl).length;
+      toast.success(`「${wheel.name}」已导入${imgCount > 0 ? `（含 ${imgCount} 张图片）` : ''}`);
     };
     reader.readAsText(file);
     e.target.value = '';

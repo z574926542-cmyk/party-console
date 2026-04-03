@@ -491,16 +491,21 @@ export default function LibraryPage() {
     toast.success(`「${game.name}」已加入游戏列表`);
   };
 
-  const handleExportGame = (game: Game) => {
-    const json = exportSingleGame(game);
-    const blob = new Blob([json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${game.name.replace(/[/\\?%*:|"<>]/g, '_')}.game.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success(`「${game.name}」已导出为JSON模板`);
+  const handleExportGame = async (game: Game) => {
+    try {
+      const json = await exportSingleGame(game);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${game.name.replace(/[/\\?%*:|"<>]/g, '_')}.game.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      const imgCount = (game.settlementImages || []).length;
+      toast.success(`「${game.name}」已导出为JSON模板${imgCount > 0 ? `（含 ${imgCount} 张周边图片）` : ''}`);
+    } catch {
+      toast.error('导出失败，请重试');
+    }
   };
 
   const handleDeleteGame = (gameId: string) => {
@@ -512,16 +517,17 @@ export default function LibraryPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = ev => {
+    reader.onload = async ev => {
       const json = ev.target?.result as string;
-      const game = parseSingleGameJSON(json);
+      const game = await parseSingleGameJSON(json);
       if (!game) { toast.error('文件格式不正确，无法解析游戏数据'); return; }
       const duplicate = library.find(g => g.name === game.name);
       if (duplicate) {
         setOverwritePending(game);
       } else {
         dispatch({ type: 'ADD_GAME_TO_LIBRARY', payload: game });
-        toast.success(`「${game.name}」已导入到库`);
+        const imgCount = (game.settlementImages || []).filter(img => img.dataUrl).length;
+        toast.success(`「${game.name}」已导入到库${imgCount > 0 ? `（含 ${imgCount} 张周边图片）` : ''}`);
       }
     };
     reader.readAsText(file);
