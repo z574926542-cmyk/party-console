@@ -39,7 +39,7 @@ mac:
         - arm64
 
 dmg:
-  title: "奇妙奇遇控制台"
+  title: "PartyConsole"
   backgroundColor: "#f0eaf8"
   window:
     width: 540
