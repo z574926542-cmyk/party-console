@@ -119,6 +119,17 @@ export interface SettlementRecord {
   createdAt: number;
 }
 
+// ---- 游戏列表组 ----
+// 唯一标识使用游戏名称列表（不依赖 ID），库中不存在的游戏名称自动忽略
+export interface GameGroup {
+  id: string;
+  name: string;          // 组名
+  gameNames: string[];   // 有序游戏名称列表（唯一标识）
+  notes?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
 // ---- 向后兼容别名 ----
 export type PeripheralRecord = SettlementRecord;
 export type PeripheralSource = SettlementSource;
@@ -127,6 +138,7 @@ export type PeripheralSource = SettlementSource;
 export interface AppState {
   gameLibrary: Game[];
   currentGameList: GameListItem[];
+  gameGroups: GameGroup[];
   stageCurrentGameId: string | null;
   tags: GameTag[];
   players: PlayerIdentity[];

@@ -6,6 +6,7 @@ import { nanoid } from 'nanoid';
 import {
   AppState,
   Game,
+  GameGroup,
   GameListItem,
   GameTag,
   PlayerIdentity,
@@ -87,6 +88,7 @@ const DEFAULT_CHALLENGE_WHEEL: Wheel = {
 const INITIAL_STATE: AppState = {
   gameLibrary: [],
   currentGameList: [],
+  gameGroups: [],
   stageCurrentGameId: null,
   tags: DEFAULT_TAGS,
   players: Array.from({ length: 30 }, (_, i) => ({
@@ -178,11 +180,23 @@ export function loadState(): AppState {
       migratedWheels = [DEFAULT_WHEEL, DEFAULT_PUNISHMENT_WHEEL, DEFAULT_CHALLENGE_WHEEL];
     }
     // 合并默认值，防止字段缺失
+    // 迁移游戏分组数据
+    const migratedGameGroups: GameGroup[] = Array.isArray(parsed.gameGroups)
+      ? parsed.gameGroups.map((g: any) => ({
+          id: g.id || nanoid(),
+          name: g.name || '未命名分组',
+          gameNames: Array.isArray(g.gameNames) ? g.gameNames : [],
+          notes: g.notes || '',
+          createdAt: g.createdAt || Date.now(),
+          updatedAt: g.updatedAt || Date.now(),
+        }))
+      : [];
     return {
       ...INITIAL_STATE,
       ...parsed,
       gameLibrary: migratedGameLibrary,
       currentGameList: migratedCurrentGameList,
+      gameGroups: migratedGameGroups,
       tags: parsed.tags && parsed.tags.length > 0 ? parsed.tags : DEFAULT_TAGS,
       wheels: migratedWheels,
       players: parsed.players && parsed.players.length > 0 ? parsed.players : INITIAL_STATE.players,
@@ -465,4 +479,82 @@ export function importWheels(state: AppState, json: string): AppState {
     ...state,
     wheels: [...state.wheels, ...newWheels],
   };
+}
+
+// ---- 游戏列表组操作 ----
+export function addGameGroup(state: AppState, group: GameGroup): AppState {
+  return { ...state, gameGroups: [...state.gameGroups, group] };
+}
+
+export function updateGameGroup(state: AppState, group: GameGroup): AppState {
+  return {
+    ...state,
+    gameGroups: state.gameGroups.map(g => g.id === group.id ? { ...group, updatedAt: Date.now() } : g),
+  };
+}
+
+export function removeGameGroup(state: AppState, groupId: string): AppState {
+  return { ...state, gameGroups: state.gameGroups.filter(g => g.id !== groupId) };
+}
+
+// 将分组中的游戏（按名称匹配）追加到当前游戏列表，库中不存在的名称自动忽略
+export function loadGroupToCurrentList(state: AppState, groupId: string): AppState {
+  const group = state.gameGroups.find(g => g.id === groupId);
+  if (!group) return state;
+  const maxOrder = state.currentGameList.reduce((max, item) => Math.max(max, item.order), 0);
+  let orderCounter = maxOrder;
+  const newItems: GameListItem[] = [];
+  for (const gameName of group.gameNames) {
+    const game = state.gameLibrary.find(g => g.name === gameName);
+    if (!game) continue; // 库中不存在则忽略
+    orderCounter += 1;
+    newItems.push({
+      id: nanoid(),
+      gameId: game.id,
+      order: orderCounter,
+      gameData: { ...game },
+    });
+  }
+  return { ...state, currentGameList: [...state.currentGameList, ...newItems] };
+}
+
+// 导出单个游戏组为 JSON
+export function exportSingleGroup(group: GameGroup): string {
+  return JSON.stringify({ version: 1, type: 'game-group-template', group }, null, 2);
+}
+
+// 导出所有游戏组为 JSON
+export function exportAllGroups(state: AppState): string {
+  return JSON.stringify({ version: 1, type: 'game-groups-all', groups: state.gameGroups }, null, 2);
+}
+
+// 解析游戏组 JSON（支持单组和多组格式）
+export function parseGroupJSON(json: string): GameGroup[] {
+  try {
+    const data = JSON.parse(json);
+    // 多组格式
+    if (Array.isArray(data.groups)) {
+      return data.groups.map((g: any) => ({
+        id: nanoid(),
+        name: g.name || '导入分组',
+        gameNames: Array.isArray(g.gameNames) ? g.gameNames : [],
+        notes: g.notes || '',
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      }));
+    }
+    // 单组格式
+    const raw = data.group || data;
+    if (!raw || !raw.name) return [];
+    return [{
+      id: nanoid(),
+      name: raw.name || '导入分组',
+      gameNames: Array.isArray(raw.gameNames) ? raw.gameNames : [],
+      notes: raw.notes || '',
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    }];
+  } catch {
+    return [];
+  }
 }

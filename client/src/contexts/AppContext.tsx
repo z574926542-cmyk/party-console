@@ -3,7 +3,7 @@
 // ============================================================
 
 import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
-import { AppState, Game, GameListItem, GameTag, PlayerIdentity, Wheel, WheelOption, PeripheralRecord, BoundTool } from '../types';
+import { AppState, Game, GameGroup, GameListItem, GameTag, PlayerIdentity, Wheel, WheelOption, PeripheralRecord, BoundTool } from '../types';
 import {
   loadState,
   saveState,
@@ -22,6 +22,10 @@ import {
   exportWheels,
   importGameLibrary,
   importWheels,
+  addGameGroup,
+  updateGameGroup,
+  removeGameGroup,
+  loadGroupToCurrentList,
 } from '../store';
 import { nanoid } from 'nanoid';
 
@@ -60,7 +64,12 @@ type Action =
   | { type: 'REMOVE_PERIPHERAL'; payload: string }
   | { type: 'ADD_PERIPHERAL_RECORD'; payload: PeripheralRecord }
   | { type: 'CLEAR_PERIPHERAL_RECORDS' }
-  | { type: 'ADD_GAME_TO_LIBRARY_FORCE'; payload: Game };  // 强制覆盖同名游戏
+  | { type: 'ADD_GAME_TO_LIBRARY_FORCE'; payload: Game }  // 强制覆盖同名游戏
+  // Game Groups
+  | { type: 'ADD_GAME_GROUP'; payload: GameGroup }
+  | { type: 'UPDATE_GAME_GROUP'; payload: GameGroup }
+  | { type: 'REMOVE_GAME_GROUP'; payload: string }
+  | { type: 'LOAD_GROUP_TO_LIST'; payload: string }; // groupId
 
 function reducer(state: AppState, action: Action): AppState {
   let newState: AppState;
@@ -169,6 +178,18 @@ function reducer(state: AppState, action: Action): AppState {
       }
       break;
     }
+    case 'ADD_GAME_GROUP':
+      newState = addGameGroup(state, action.payload);
+      break;
+    case 'UPDATE_GAME_GROUP':
+      newState = updateGameGroup(state, action.payload);
+      break;
+    case 'REMOVE_GAME_GROUP':
+      newState = removeGameGroup(state, action.payload);
+      break;
+    case 'LOAD_GROUP_TO_LIST':
+      newState = loadGroupToCurrentList(state, action.payload);
+      break;
     default:
       return state;
   }
