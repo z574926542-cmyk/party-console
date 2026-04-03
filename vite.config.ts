@@ -177,6 +177,8 @@ export default defineConfig({
   },
   envDir: path.resolve(import.meta.dirname),
   root: path.resolve(import.meta.dirname, "client"),
+  // Use relative base path for Electron file:// protocol compatibility
+  base: process.env.ELECTRON_BUILD === '1' ? './' : '/',
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
