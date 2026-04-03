@@ -1,6 +1,7 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { Route, Switch } from "wouter";
+import { Route, Switch, Router as WouterRouter } from "wouter";
+import { useHashLocation } from "wouter/use-hash-location";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { AppProvider } from "./contexts/AppContext";
@@ -14,6 +15,7 @@ import NotFound from "./pages/NotFound";
 
 function Router() {
   return (
+    <WouterRouter hook={useHashLocation}>
     <MainLayout>
       <Switch>
         <Route path="/" component={ConsolePage} />
@@ -24,6 +26,7 @@ function Router() {
         <Route component={NotFound} />
       </Switch>
     </MainLayout>
+    </WouterRouter>
   );
 }
 

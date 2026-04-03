@@ -9,7 +9,7 @@ function createWindow() {
     height: 900,
     minWidth: 1024,
     minHeight: 700,
-    title: 'PartyConsole',
+    title: '奇妙奇遇控制台',
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,

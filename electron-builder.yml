@@ -1,5 +1,5 @@
 appId: com.partyconsole.app
-productName: PartyConsole
+productName: 奇妙奇遇控制台
 copyright: Copyright © 2025 PartyConsole
 
 # App icon - electron-builder auto-selects .icns for mac, .ico for win
@@ -54,4 +54,4 @@ nsis:
   allowToChangeInstallationDirectory: true
   createDesktopShortcut: true
   createStartMenuShortcut: true
-  shortcutName: PartyConsole
+  shortcutName: 奇妙奇遇控制台
