@@ -1,29 +1,20 @@
 // ============================================================
-// 工具页面 - 派对游戏辅助工具集
-// Design: Professional Dark Dashboard
-// Tools: 随机数字生成器 / 随机选人 / 随机分组 / 倒计时 / 骰子
+// 工具箱页面
+// Design: 奇妙奇遇 v2 — 工具感 · 微醺夜晚 · 清晰层级
+// Tools: 随机数字 / 随机选人 / 随机分组 / 倒计时 / 骰子
 // ============================================================
 
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { PlayerIdentity } from '@/types';
-import { nanoid } from 'nanoid';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
 import {
   Hash, Users, Shuffle, Timer, Dice5, ChevronRight,
-  Play, Pause, RotateCcw, Plus, Minus, X, Check,
-  Settings, Zap, RefreshCw, Copy, ChevronDown, ChevronUp,
-  Filter, ArrowRight, SkipForward
+  Play, Pause, RotateCcw, Plus, Minus, Zap, Copy, Filter
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Switch } from '@/components/ui/switch';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Badge } from '@/components/ui/badge';
 
 // ============================================================
-// 工具导航
+// 工具元数据
 // ============================================================
 type ToolId = 'random-number' | 'random-pick' | 'random-group' | 'countdown' | 'dice';
 
@@ -32,16 +23,71 @@ interface ToolMeta {
   label: string;
   icon: React.ReactNode;
   desc: string;
-  color: string;
+  accentColor: string;
+  glowColor: string;
 }
 
 const TOOLS: ToolMeta[] = [
-  { id: 'random-number', label: '随机数字', icon: <Hash size={18} />, desc: '从范围内随机生成数字', color: '#6366f1' },
-  { id: 'random-pick', label: '随机选人', icon: <Users size={18} />, desc: '从玩家中随机抽取', color: '#f43f5e' },
-  { id: 'random-group', label: '随机分组', icon: <Shuffle size={18} />, desc: '将玩家随机分为若干组', color: '#f59e0b' },
-  { id: 'countdown', label: '倒计时', icon: <Timer size={18} />, desc: '可自定义的倒计时器', color: '#10b981' },
-  { id: 'dice', label: '骰子', icon: <Dice5 size={18} />, desc: '模拟掷骰子', color: '#06b6d4' },
+  {
+    id: 'random-number',
+    label: '随机数字',
+    icon: <Hash size={16} />,
+    desc: '从范围内随机生成数字',
+    accentColor: 'oklch(0.60 0.20 285)',
+    glowColor: 'oklch(0.60 0.20 285 / 0.2)',
+  },
+  {
+    id: 'random-pick',
+    label: '随机选人',
+    icon: <Users size={16} />,
+    desc: '从玩家中随机抽取',
+    accentColor: 'oklch(0.62 0.22 10)',
+    glowColor: 'oklch(0.62 0.22 10 / 0.2)',
+  },
+  {
+    id: 'random-group',
+    label: '随机分组',
+    icon: <Shuffle size={16} />,
+    desc: '将玩家随机分为若干组',
+    accentColor: 'oklch(0.78 0.16 52)',
+    glowColor: 'oklch(0.78 0.16 52 / 0.2)',
+  },
+  {
+    id: 'countdown',
+    label: '倒计时',
+    icon: <Timer size={16} />,
+    desc: '可自定义的倒计时器',
+    accentColor: 'oklch(0.65 0.18 155)',
+    glowColor: 'oklch(0.65 0.18 155 / 0.2)',
+  },
+  {
+    id: 'dice',
+    label: '骰子',
+    icon: <Dice5 size={16} />,
+    desc: '模拟掷骰子',
+    accentColor: 'oklch(0.68 0.18 200)',
+    glowColor: 'oklch(0.68 0.18 200 / 0.2)',
+  },
 ];
+
+// ============================================================
+// 共用样式工具函数
+// ============================================================
+const filterBtnStyle = (active: boolean, accentColor: string) => active
+  ? { background: `${accentColor.replace(')', ' / 0.15)')}`, border: `1px solid ${accentColor.replace(')', ' / 0.4)')}`, color: accentColor }
+  : { background: 'oklch(0.155 0.022 270)', border: '1px solid oklch(0.22 0.022 270)', color: 'oklch(0.50 0.015 270)' };
+
+const numInputStyle = {
+  background: 'oklch(0.19 0.022 270)',
+  border: '1px solid oklch(0.28 0.022 270)',
+  color: 'oklch(0.82 0.008 270)',
+};
+
+const numBtnStyle = {
+  background: 'oklch(0.19 0.022 270)',
+  border: '1px solid oklch(0.26 0.022 270)',
+  color: 'oklch(0.55 0.02 270)',
+};
 
 // ============================================================
 // 随机数字生成器
@@ -60,15 +106,14 @@ function RandomNumberTool() {
   const [filterSocial, setFilterSocial] = useState<'all' | 'introvert' | 'extrovert'>('all');
   const [usePlayerFilter, setUsePlayerFilter] = useState(false);
   const animRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const accent = 'oklch(0.60 0.20 285)';
 
-  // 根据过滤条件获取可用号码池
   const availablePool = useMemo(() => {
     if (!usePlayerFilter) {
       const pool: number[] = [];
       for (let i = min; i <= max; i++) pool.push(i);
       return excludeUsed ? pool.filter(n => !usedNumbers.includes(n)) : pool;
     }
-    // 从玩家身份信息过滤
     let players = state.players;
     if (filterGender !== 'all') players = players.filter(p => p.gender === filterGender);
     if (filterSocial !== 'all') players = players.filter(p => p.socialType === filterSocial);
@@ -77,184 +122,203 @@ function RandomNumberTool() {
   }, [usePlayerFilter, min, max, excludeUsed, usedNumbers, state.players, filterGender, filterSocial]);
 
   const handleGenerate = () => {
-    if (availablePool.length === 0) {
-      toast.error('没有可用的号码');
-      return;
-    }
+    if (availablePool.length === 0) { toast.error('没有可用的号码'); return; }
     const actualCount = Math.min(count, availablePool.length);
     setAnimating(true);
-
-    // 滚动动画
     let ticks = 0;
-    const maxTicks = 18;
     if (animRef.current) clearInterval(animRef.current);
     animRef.current = setInterval(() => {
       ticks++;
-      const tempResults: number[] = [];
-      for (let i = 0; i < actualCount; i++) {
-        tempResults.push(availablePool[Math.floor(Math.random() * availablePool.length)]);
-      }
-      setDisplayNums(tempResults);
-      if (ticks >= maxTicks) {
+      setDisplayNums(Array.from({ length: actualCount }, () => availablePool[Math.floor(Math.random() * availablePool.length)]));
+      if (ticks >= 18) {
         clearInterval(animRef.current!);
-        // 最终结果
-        const shuffled = [...availablePool].sort(() => Math.random() - 0.5);
-        const finalResults = shuffled.slice(0, actualCount);
-        setResults(finalResults);
-        setDisplayNums(finalResults);
-        if (excludeUsed) setUsedNumbers(prev => [...prev, ...finalResults]);
+        const final = [...availablePool].sort(() => Math.random() - 0.5).slice(0, actualCount);
+        setResults(final);
+        setDisplayNums(final);
+        if (excludeUsed) setUsedNumbers(prev => [...prev, ...final]);
         setAnimating(false);
       }
     }, 60);
   };
 
   const handleReset = () => {
-    setMin(1);
-    setMax(state.players.length || 30);
-    setCount(1);
-    setExcludeUsed(false);
-    setUsedNumbers([]);
-    setResults([]);
-    setDisplayNums([]);
-    setFilterGender('all');
-    setFilterSocial('all');
-    setUsePlayerFilter(false);
+    setMin(1); setMax(state.players.length || 30); setCount(1);
+    setExcludeUsed(false); setUsedNumbers([]); setResults([]); setDisplayNums([]);
+    setFilterGender('all'); setFilterSocial('all'); setUsePlayerFilter(false);
     toast.success('已复原默认设置');
   };
 
-  const handleClearUsed = () => {
-    setUsedNumbers([]);
-    toast.success('已清除已用号码');
-  };
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(results.join(', '));
-    toast.success('已复制结果');
-  };
-
-  const genderLabel = { all: '不限性别', male: '男', female: '女' };
-  const socialLabel = { all: '不限社交', introvert: '社恐', extrovert: '社牛' };
-
   return (
-    <div className="flex flex-col gap-5 h-full overflow-y-auto p-1">
-      {/* 结果展示 */}
-      <div className="flex flex-col items-center justify-center min-h-[160px] rounded-2xl bg-gradient-to-br from-indigo-500/10 to-indigo-600/5 border border-indigo-500/20 relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(99,102,241,0.08),transparent_70%)]" />
+    <div className="flex flex-col gap-4 h-full overflow-y-auto">
+      {/* 结果展示区 */}
+      <div
+        className="flex flex-col items-center justify-center min-h-[140px] rounded-2xl relative overflow-hidden"
+        style={{
+          background: 'oklch(0.60 0.20 285 / 0.06)',
+          border: '1px solid oklch(0.60 0.20 285 / 0.2)',
+          boxShadow: displayNums.length > 0 ? '0 0 32px oklch(0.60 0.20 285 / 0.08)' : 'none',
+        }}
+      >
         {displayNums.length > 0 ? (
-          <div className="flex flex-wrap gap-3 justify-center p-4 relative z-10">
+          <div className="flex flex-wrap gap-4 justify-center p-4">
             {displayNums.map((n, i) => (
-              <div key={i} className={cn('font-mono-display text-5xl font-black text-indigo-300 tabular-nums transition-all', animating && 'blur-[1px]')}>
+              <div
+                key={i}
+                className="font-mono-display tabular-nums transition-all"
+                style={{
+                  fontSize: displayNums.length > 3 ? '2.5rem' : '3.5rem',
+                  fontWeight: 900,
+                  color: accent,
+                  filter: animating ? 'blur(1.5px)' : 'none',
+                  textShadow: animating ? 'none' : `0 0 20px ${accent}60`,
+                }}
+              >
                 {String(n).padStart(2, '0')}
               </div>
             ))}
           </div>
         ) : (
-          <div className="text-muted-foreground/40 text-sm relative z-10">点击生成按钮</div>
+          <div className="text-sm" style={{ color: 'oklch(0.35 0.015 270)' }}>点击生成按钮</div>
         )}
       </div>
 
-      {/* 设置区 */}
-      <div className="space-y-3">
-        {/* 玩家过滤开关 */}
-        <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-secondary/30 border border-border">
-          <div className="flex items-center gap-2">
-            <Filter size={13} className="text-muted-foreground" />
-            <span className="text-sm font-medium">按玩家身份过滤</span>
-          </div>
-          <Switch checked={usePlayerFilter} onCheckedChange={setUsePlayerFilter} />
+      {/* 过滤模式切换 */}
+      <div
+        className="flex items-center justify-between px-3 py-2.5 rounded-xl cursor-pointer"
+        style={{ background: 'oklch(0.155 0.022 270)', border: '1px solid oklch(0.22 0.022 270)' }}
+        onClick={() => setUsePlayerFilter(v => !v)}
+      >
+        <div className="flex items-center gap-2">
+          <Filter size={13} style={{ color: usePlayerFilter ? accent : 'oklch(0.50 0.015 270)' }} />
+          <span className="text-sm font-semibold" style={{ color: 'oklch(0.82 0.008 270)' }}>按玩家身份过滤</span>
         </div>
+        <div
+          className="w-9 h-5 rounded-full transition-all relative"
+          style={{ background: usePlayerFilter ? 'oklch(0.60 0.20 285 / 0.4)' : 'oklch(0.22 0.022 270)', border: `1px solid ${usePlayerFilter ? accent : 'oklch(0.28 0.022 270)'}` }}
+        >
+          <div
+            className="absolute top-0.5 w-4 h-4 rounded-full transition-all"
+            style={{ background: usePlayerFilter ? accent : 'oklch(0.40 0.015 270)', left: usePlayerFilter ? '18px' : '2px' }}
+          />
+        </div>
+      </div>
 
-        {usePlayerFilter ? (
-          <div className="space-y-2 px-3 py-2 rounded-xl bg-secondary/20 border border-border">
-            <div className="flex gap-1.5">
-              {(['all', 'male', 'female'] as const).map(g => (
-                <button key={g} onClick={() => setFilterGender(g)}
-                  className={cn('flex-1 text-xs py-1.5 rounded-lg border transition-all', filterGender === g ? 'border-indigo-500/50 bg-indigo-500/15 text-indigo-300' : 'border-border text-muted-foreground hover:text-foreground')}>
-                  {genderLabel[g]}
-                </button>
-              ))}
-            </div>
-            <div className="flex gap-1.5">
-              {(['all', 'introvert', 'extrovert'] as const).map(s => (
-                <button key={s} onClick={() => setFilterSocial(s)}
-                  className={cn('flex-1 text-xs py-1.5 rounded-lg border transition-all', filterSocial === s ? 'border-indigo-500/50 bg-indigo-500/15 text-indigo-300' : 'border-border text-muted-foreground hover:text-foreground')}>
-                  {socialLabel[s]}
-                </button>
-              ))}
-            </div>
-            <div className="text-xs text-muted-foreground/60 text-center">
-              可用号码池：{availablePool.length} 个
-            </div>
+      {usePlayerFilter ? (
+        <div className="space-y-2 px-3 py-3 rounded-xl" style={{ background: 'oklch(0.155 0.022 270)', border: '1px solid oklch(0.22 0.022 270)' }}>
+          <div className="flex gap-1.5">
+            {(['all', 'male', 'female'] as const).map(g => (
+              <button key={g} onClick={() => setFilterGender(g)} className="flex-1 text-xs py-1.5 rounded-xl font-semibold transition-all" style={filterBtnStyle(filterGender === g, accent)}>
+                {g === 'all' ? '不限' : g === 'male' ? '♂ 男' : '♀ 女'}
+              </button>
+            ))}
           </div>
-        ) : (
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">最小值</label>
+          <div className="flex gap-1.5">
+            {(['all', 'introvert', 'extrovert'] as const).map(s => (
+              <button key={s} onClick={() => setFilterSocial(s)} className="flex-1 text-xs py-1.5 rounded-xl font-semibold transition-all" style={filterBtnStyle(filterSocial === s, accent)}>
+                {s === 'all' ? '不限' : s === 'introvert' ? '🌙 社恐' : '☀️ 社牛'}
+              </button>
+            ))}
+          </div>
+          <div className="text-xs text-center" style={{ color: 'oklch(0.45 0.015 270)' }}>可用号码池：{availablePool.length} 个</div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3">
+          {[{ label: '最小值', val: min, setVal: setMin, onDec: () => setMin(m => Math.max(0, m - 1)), onInc: () => setMin(m => Math.min(m + 1, max)) },
+            { label: '最大值', val: max, setVal: setMax, onDec: () => setMax(m => Math.max(min, m - 1)), onInc: () => setMax(m => m + 1) }
+          ].map(({ label, val, setVal, onDec, onInc }) => (
+            <div key={label} className="space-y-1.5">
+              <label className="text-xs font-bold tracking-widest uppercase" style={{ color: 'oklch(0.40 0.015 270)', letterSpacing: '0.1em' }}>{label}</label>
               <div className="flex items-center gap-1">
-                <button onClick={() => setMin(m => Math.max(0, m - 1))} className="w-7 h-8 rounded-lg border border-border bg-secondary/50 hover:bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground transition-all"><Minus size={12} /></button>
-                <Input type="number" value={min} onChange={e => setMin(parseInt(e.target.value) || 0)} className="flex-1 h-8 text-center text-sm bg-secondary/50 border-border" />
-                <button onClick={() => setMin(m => Math.min(m + 1, max))} className="w-7 h-8 rounded-lg border border-border bg-secondary/50 hover:bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground transition-all"><Plus size={12} /></button>
+                <button onClick={onDec} className="w-7 h-8 rounded-xl flex items-center justify-center transition-all" style={numBtnStyle}><Minus size={12} /></button>
+                <input type="number" value={val} onChange={e => setVal(parseInt(e.target.value) || 0)} className="flex-1 h-8 text-center text-sm rounded-xl outline-none" style={numInputStyle} />
+                <button onClick={onInc} className="w-7 h-8 rounded-xl flex items-center justify-center transition-all" style={numBtnStyle}><Plus size={12} /></button>
               </div>
             </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">最大值</label>
-              <div className="flex items-center gap-1">
-                <button onClick={() => setMax(m => Math.max(min, m - 1))} className="w-7 h-8 rounded-lg border border-border bg-secondary/50 hover:bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground transition-all"><Minus size={12} /></button>
-                <Input type="number" value={max} onChange={e => setMax(parseInt(e.target.value) || 1)} className="flex-1 h-8 text-center text-sm bg-secondary/50 border-border" />
-                <button onClick={() => setMax(m => m + 1)} className="w-7 h-8 rounded-lg border border-border bg-secondary/50 hover:bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground transition-all"><Plus size={12} /></button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <div className="space-y-1.5">
-          <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">生成数量</label>
-          <div className="flex items-center gap-1">
-            <button onClick={() => setCount(c => Math.max(1, c - 1))} className="w-7 h-8 rounded-lg border border-border bg-secondary/50 hover:bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground transition-all"><Minus size={12} /></button>
-            <Input type="number" value={count} min={1} onChange={e => setCount(Math.max(1, parseInt(e.target.value) || 1))} className="flex-1 h-8 text-center text-sm bg-secondary/50 border-border" />
-            <button onClick={() => setCount(c => c + 1)} className="w-7 h-8 rounded-lg border border-border bg-secondary/50 hover:bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground transition-all"><Plus size={12} /></button>
-          </div>
+          ))}
         </div>
+      )}
 
-        <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-secondary/30 border border-border">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium">排除已用号码</span>
-            {usedNumbers.length > 0 && (
-              <span className="text-xs px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 font-mono">{usedNumbers.length}</span>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            {usedNumbers.length > 0 && (
-              <button onClick={handleClearUsed} className="text-xs text-muted-foreground hover:text-foreground transition-colors">清除</button>
-            )}
-            <Switch checked={excludeUsed} onCheckedChange={setExcludeUsed} />
+      <div className="space-y-1.5">
+        <label className="text-xs font-bold tracking-widest uppercase" style={{ color: 'oklch(0.40 0.015 270)', letterSpacing: '0.1em' }}>生成数量</label>
+        <div className="flex items-center gap-1">
+          <button onClick={() => setCount(c => Math.max(1, c - 1))} className="w-7 h-8 rounded-xl flex items-center justify-center" style={numBtnStyle}><Minus size={12} /></button>
+          <input type="number" value={count} min={1} onChange={e => setCount(Math.max(1, parseInt(e.target.value) || 1))} className="flex-1 h-8 text-center text-sm rounded-xl outline-none" style={numInputStyle} />
+          <button onClick={() => setCount(c => c + 1)} className="w-7 h-8 rounded-xl flex items-center justify-center" style={numBtnStyle}><Plus size={12} /></button>
+        </div>
+      </div>
+
+      {/* 排除已用 */}
+      <div
+        className="flex items-center justify-between px-3 py-2.5 rounded-xl cursor-pointer"
+        style={{ background: 'oklch(0.155 0.022 270)', border: '1px solid oklch(0.22 0.022 270)' }}
+        onClick={() => setExcludeUsed(v => !v)}
+      >
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold" style={{ color: 'oklch(0.82 0.008 270)' }}>排除已用号码</span>
+          {usedNumbers.length > 0 && (
+            <span className="text-xs px-1.5 py-0.5 rounded-full font-mono font-bold" style={{ background: 'oklch(0.78 0.16 52 / 0.15)', color: 'oklch(0.78 0.16 52)' }}>{usedNumbers.length}</span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          {usedNumbers.length > 0 && (
+            <button
+              onClick={e => { e.stopPropagation(); setUsedNumbers([]); toast.success('已清除'); }}
+              className="text-xs"
+              style={{ color: 'oklch(0.50 0.015 270)' }}
+            >
+              清除
+            </button>
+          )}
+          <div
+            className="w-9 h-5 rounded-full transition-all relative"
+            style={{ background: excludeUsed ? 'oklch(0.60 0.20 285 / 0.4)' : 'oklch(0.22 0.022 270)', border: `1px solid ${excludeUsed ? accent : 'oklch(0.28 0.022 270)'}` }}
+          >
+            <div className="absolute top-0.5 w-4 h-4 rounded-full transition-all" style={{ background: excludeUsed ? accent : 'oklch(0.40 0.015 270)', left: excludeUsed ? '18px' : '2px' }} />
           </div>
         </div>
       </div>
 
       {/* 操作按钮 */}
       <div className="flex gap-2">
-        <Button onClick={handleGenerate} disabled={animating} className="flex-1 bg-indigo-600 hover:bg-indigo-500 h-11 text-base font-bold gap-2">
-          <Zap size={16} className={animating ? 'animate-pulse' : ''} />
+        <button
+          onClick={handleGenerate}
+          disabled={animating}
+          className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all disabled:opacity-40"
+          style={{
+            background: 'oklch(0.60 0.20 285 / 0.2)',
+            border: '1px solid oklch(0.60 0.20 285 / 0.5)',
+            color: accent,
+            boxShadow: '0 0 16px oklch(0.60 0.20 285 / 0.12)',
+          }}
+        >
+          <Zap size={15} className={animating ? 'animate-pulse' : ''} />
           {animating ? '生成中...' : '生成'}
-        </Button>
+        </button>
         {results.length > 0 && (
-          <Button variant="outline" onClick={handleCopy} className="h-11 px-4">
+          <button
+            onClick={() => { navigator.clipboard.writeText(results.join(', ')); toast.success('已复制'); }}
+            className="px-4 py-3 rounded-xl transition-all"
+            style={{ background: 'oklch(0.155 0.022 270)', border: '1px solid oklch(0.22 0.022 270)', color: 'oklch(0.55 0.02 270)' }}
+          >
             <Copy size={14} />
-          </Button>
+          </button>
         )}
-        <Button variant="outline" onClick={handleReset} className="h-11 px-4">
+        <button
+          onClick={handleReset}
+          className="px-4 py-3 rounded-xl transition-all"
+          style={{ background: 'oklch(0.155 0.022 270)', border: '1px solid oklch(0.22 0.022 270)', color: 'oklch(0.55 0.02 270)' }}
+        >
           <RotateCcw size={14} />
-        </Button>
+        </button>
       </div>
 
-      {/* 已用号码展示 */}
+      {/* 已用号码 */}
       {usedNumbers.length > 0 && (
-        <div className="px-3 py-2 rounded-xl bg-secondary/20 border border-border">
-          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">已用号码</div>
+        <div className="px-3 py-2.5 rounded-xl" style={{ background: 'oklch(0.155 0.022 270)', border: '1px solid oklch(0.22 0.022 270)' }}>
+          <div className="text-xs font-bold tracking-widest uppercase mb-2" style={{ color: 'oklch(0.40 0.015 270)', letterSpacing: '0.1em' }}>已用号码</div>
           <div className="flex flex-wrap gap-1">
             {usedNumbers.map((n, i) => (
-              <span key={i} className="text-xs px-1.5 py-0.5 rounded bg-secondary text-muted-foreground font-mono">{n}</span>
+              <span key={i} className="text-xs px-1.5 py-0.5 rounded-lg font-mono" style={{ background: 'oklch(0.19 0.022 270)', color: 'oklch(0.50 0.015 270)' }}>{n}</span>
             ))}
           </div>
         </div>
@@ -277,6 +341,7 @@ function RandomPickTool() {
   const [animating, setAnimating] = useState(false);
   const [displayPlayers, setDisplayPlayers] = useState<PlayerIdentity[]>([]);
   const animRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const accent = 'oklch(0.62 0.22 10)';
 
   const pool = useMemo(() => {
     let players = [...state.players];
@@ -287,27 +352,17 @@ function RandomPickTool() {
   }, [state.players, filterGender, filterSocial, excludePicked, pickedHistory]);
 
   const handlePick = () => {
-    if (pool.length === 0) {
-      toast.error('没有可选的玩家');
-      return;
-    }
+    if (pool.length === 0) { toast.error('没有可选的玩家'); return; }
     const actualCount = Math.min(pickCount, pool.length);
     setAnimating(true);
-
     let ticks = 0;
-    const maxTicks = 16;
     if (animRef.current) clearInterval(animRef.current);
     animRef.current = setInterval(() => {
       ticks++;
-      const temp: PlayerIdentity[] = [];
-      for (let i = 0; i < actualCount; i++) {
-        temp.push(pool[Math.floor(Math.random() * pool.length)]);
-      }
-      setDisplayPlayers(temp);
-      if (ticks >= maxTicks) {
+      setDisplayPlayers(Array.from({ length: actualCount }, () => pool[Math.floor(Math.random() * pool.length)]));
+      if (ticks >= 16) {
         clearInterval(animRef.current!);
-        const shuffled = [...pool].sort(() => Math.random() - 0.5);
-        const final = shuffled.slice(0, actualCount);
+        const final = [...pool].sort(() => Math.random() - 0.5).slice(0, actualCount);
         setResults(final);
         setDisplayPlayers(final);
         if (excludePicked) setPickedHistory(prev => [...prev, ...final.map(p => p.number)]);
@@ -316,47 +371,64 @@ function RandomPickTool() {
     }, 60);
   };
 
-  const genderIcon = { male: '♂', female: '♀', unknown: '?' };
-  const socialIcon = { introvert: '🌙', extrovert: '☀️', unknown: '—' };
-
   return (
-    <div className="flex flex-col gap-5 h-full overflow-y-auto p-1">
+    <div className="flex flex-col gap-4 h-full overflow-y-auto">
       {/* 结果展示 */}
-      <div className="flex flex-col items-center justify-center min-h-[160px] rounded-2xl bg-gradient-to-br from-rose-500/10 to-rose-600/5 border border-rose-500/20 relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(244,63,94,0.08),transparent_70%)]" />
+      <div
+        className="flex flex-col items-center justify-center min-h-[140px] rounded-2xl relative overflow-hidden"
+        style={{
+          background: 'oklch(0.62 0.22 10 / 0.06)',
+          border: '1px solid oklch(0.62 0.22 10 / 0.2)',
+          boxShadow: displayPlayers.length > 0 ? '0 0 32px oklch(0.62 0.22 10 / 0.08)' : 'none',
+        }}
+      >
         {displayPlayers.length > 0 ? (
-          <div className="flex flex-wrap gap-3 justify-center p-4 relative z-10">
+          <div className="flex flex-wrap gap-4 justify-center p-4">
             {displayPlayers.map((p, i) => (
-              <div key={i} className={cn('flex flex-col items-center gap-1 transition-all', animating && 'blur-[1px]')}>
-                <div className="font-mono-display text-5xl font-black text-rose-300 tabular-nums">
+              <div key={i} className="flex flex-col items-center gap-1.5 transition-all" style={{ filter: animating ? 'blur(1.5px)' : 'none' }}>
+                <div
+                  className="font-mono-display tabular-nums"
+                  style={{
+                    fontSize: displayPlayers.length > 3 ? '2.5rem' : '3.5rem',
+                    fontWeight: 900,
+                    color: accent,
+                    textShadow: animating ? 'none' : `0 0 20px ${accent}60`,
+                  }}
+                >
                   {String(p.number).padStart(2, '0')}
                 </div>
                 <div className="flex gap-1">
-                  {p.gender !== 'unknown' && <span className="text-xs px-1.5 py-0.5 rounded-full bg-secondary text-muted-foreground">{genderIcon[p.gender]}</span>}
-                  {p.socialType !== 'unknown' && <span className="text-xs px-1.5 py-0.5 rounded-full bg-secondary text-muted-foreground">{socialIcon[p.socialType]}</span>}
+                  {p.gender !== 'unknown' && (
+                    <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ background: 'oklch(0.19 0.022 270)', color: 'oklch(0.60 0.02 270)' }}>
+                      {p.gender === 'male' ? '♂' : '♀'}
+                    </span>
+                  )}
+                  {p.socialType !== 'unknown' && (
+                    <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ background: 'oklch(0.19 0.022 270)', color: 'oklch(0.60 0.02 270)' }}>
+                      {p.socialType === 'introvert' ? '🌙' : '☀️'}
+                    </span>
+                  )}
                 </div>
               </div>
             ))}
           </div>
         ) : (
-          <div className="text-muted-foreground/40 text-sm relative z-10">点击选人按钮</div>
+          <div className="text-sm" style={{ color: 'oklch(0.35 0.015 270)' }}>点击选人按钮</div>
         )}
       </div>
 
-      {/* 过滤设置 */}
+      {/* 过滤 */}
       <div className="space-y-2">
         <div className="flex gap-1.5">
           {(['all', 'male', 'female'] as const).map(g => (
-            <button key={g} onClick={() => setFilterGender(g)}
-              className={cn('flex-1 text-xs py-1.5 rounded-lg border transition-all', filterGender === g ? 'border-rose-500/50 bg-rose-500/15 text-rose-300' : 'border-border text-muted-foreground hover:text-foreground')}>
+            <button key={g} onClick={() => setFilterGender(g)} className="flex-1 text-xs py-1.5 rounded-xl font-semibold transition-all" style={filterBtnStyle(filterGender === g, accent)}>
               {g === 'all' ? '不限' : g === 'male' ? '♂ 男' : '♀ 女'}
             </button>
           ))}
         </div>
         <div className="flex gap-1.5">
           {(['all', 'introvert', 'extrovert'] as const).map(s => (
-            <button key={s} onClick={() => setFilterSocial(s)}
-              className={cn('flex-1 text-xs py-1.5 rounded-lg border transition-all', filterSocial === s ? 'border-rose-500/50 bg-rose-500/15 text-rose-300' : 'border-border text-muted-foreground hover:text-foreground')}>
+            <button key={s} onClick={() => setFilterSocial(s)} className="flex-1 text-xs py-1.5 rounded-xl font-semibold transition-all" style={filterBtnStyle(filterSocial === s, accent)}>
               {s === 'all' ? '不限' : s === 'introvert' ? '🌙 社恐' : '☀️ 社牛'}
             </button>
           ))}
@@ -364,31 +436,47 @@ function RandomPickTool() {
       </div>
 
       <div className="space-y-1.5">
-        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">选取数量</label>
+        <label className="text-xs font-bold tracking-widest uppercase" style={{ color: 'oklch(0.40 0.015 270)', letterSpacing: '0.1em' }}>选取数量</label>
         <div className="flex items-center gap-1">
-          <button onClick={() => setPickCount(c => Math.max(1, c - 1))} className="w-7 h-8 rounded-lg border border-border bg-secondary/50 hover:bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground transition-all"><Minus size={12} /></button>
-          <Input type="number" value={pickCount} min={1} onChange={e => setPickCount(Math.max(1, parseInt(e.target.value) || 1))} className="flex-1 h-8 text-center text-sm bg-secondary/50 border-border" />
-          <button onClick={() => setPickCount(c => c + 1)} className="w-7 h-8 rounded-lg border border-border bg-secondary/50 hover:bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground transition-all"><Plus size={12} /></button>
+          <button onClick={() => setPickCount(c => Math.max(1, c - 1))} className="w-7 h-8 rounded-xl flex items-center justify-center" style={numBtnStyle}><Minus size={12} /></button>
+          <input type="number" value={pickCount} min={1} onChange={e => setPickCount(Math.max(1, parseInt(e.target.value) || 1))} className="flex-1 h-8 text-center text-sm rounded-xl outline-none" style={numInputStyle} />
+          <button onClick={() => setPickCount(c => c + 1)} className="w-7 h-8 rounded-xl flex items-center justify-center" style={numBtnStyle}><Plus size={12} /></button>
         </div>
       </div>
 
-      <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-secondary/30 border border-border">
+      {/* 排除已选 */}
+      <div
+        className="flex items-center justify-between px-3 py-2.5 rounded-xl cursor-pointer"
+        style={{ background: 'oklch(0.155 0.022 270)', border: '1px solid oklch(0.22 0.022 270)' }}
+        onClick={() => setExcludePicked(v => !v)}
+      >
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium">排除已选玩家</span>
-          {pickedHistory.length > 0 && <span className="text-xs px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 font-mono">{pickedHistory.length}</span>}
+          <span className="text-sm font-semibold" style={{ color: 'oklch(0.82 0.008 270)' }}>排除已选玩家</span>
+          {pickedHistory.length > 0 && (
+            <span className="text-xs px-1.5 py-0.5 rounded-full font-mono font-bold" style={{ background: 'oklch(0.78 0.16 52 / 0.15)', color: 'oklch(0.78 0.16 52)' }}>{pickedHistory.length}</span>
+          )}
         </div>
         <div className="flex items-center gap-2">
-          {pickedHistory.length > 0 && <button onClick={() => setPickedHistory([])} className="text-xs text-muted-foreground hover:text-foreground transition-colors">清除</button>}
-          <Switch checked={excludePicked} onCheckedChange={setExcludePicked} />
+          {pickedHistory.length > 0 && (
+            <button onClick={e => { e.stopPropagation(); setPickedHistory([]); }} className="text-xs" style={{ color: 'oklch(0.50 0.015 270)' }}>清除</button>
+          )}
+          <div className="w-9 h-5 rounded-full transition-all relative" style={{ background: excludePicked ? 'oklch(0.62 0.22 10 / 0.4)' : 'oklch(0.22 0.022 270)', border: `1px solid ${excludePicked ? accent : 'oklch(0.28 0.022 270)'}` }}>
+            <div className="absolute top-0.5 w-4 h-4 rounded-full transition-all" style={{ background: excludePicked ? accent : 'oklch(0.40 0.015 270)', left: excludePicked ? '18px' : '2px' }} />
+          </div>
         </div>
       </div>
 
-      <div className="text-xs text-muted-foreground/60 text-center">可选玩家：{pool.length} 人</div>
+      <div className="text-xs text-center" style={{ color: 'oklch(0.40 0.015 270)' }}>可选玩家：{pool.length} 人</div>
 
-      <Button onClick={handlePick} disabled={animating || pool.length === 0} className="h-11 text-base font-bold gap-2 bg-rose-600 hover:bg-rose-500">
-        <Users size={16} className={animating ? 'animate-pulse' : ''} />
+      <button
+        onClick={handlePick}
+        disabled={animating || pool.length === 0}
+        className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all disabled:opacity-40"
+        style={{ background: 'oklch(0.62 0.22 10 / 0.2)', border: '1px solid oklch(0.62 0.22 10 / 0.5)', color: accent, boxShadow: '0 0 16px oklch(0.62 0.22 10 / 0.1)' }}
+      >
+        <Users size={15} className={animating ? 'animate-pulse' : ''} />
         {animating ? '选取中...' : '随机选人'}
-      </Button>
+      </button>
     </div>
   );
 }
@@ -404,6 +492,7 @@ function RandomGroupTool() {
   const [balanceGender, setBalanceGender] = useState(false);
   const [groups, setGroups] = useState<PlayerIdentity[][]>([]);
   const [animating, setAnimating] = useState(false);
+  const accent = 'oklch(0.78 0.16 52)';
 
   const pool = useMemo(() => {
     let players = [...state.players];
@@ -412,16 +501,19 @@ function RandomGroupTool() {
     return players;
   }, [state.players, filterGender, filterSocial]);
 
+  const GROUP_ACCENT_COLORS = [
+    'oklch(0.60 0.20 285)', 'oklch(0.62 0.22 10)', 'oklch(0.78 0.16 52)',
+    'oklch(0.65 0.18 155)', 'oklch(0.68 0.18 200)', 'oklch(0.65 0.18 320)',
+    'oklch(0.72 0.18 60)', 'oklch(0.60 0.18 240)',
+  ];
+
   const handleGroup = () => {
     if (pool.length === 0) { toast.error('没有可用的玩家'); return; }
     if (groupCount < 2) { toast.error('至少需要分成 2 组'); return; }
     setAnimating(true);
-
     setTimeout(() => {
       let players = [...pool];
-
       if (balanceGender) {
-        // 性别均衡分组：交替分配男女
         const males = players.filter(p => p.gender === 'male').sort(() => Math.random() - 0.5);
         const females = players.filter(p => p.gender === 'female').sort(() => Math.random() - 0.5);
         const others = players.filter(p => p.gender === 'unknown').sort(() => Math.random() - 0.5);
@@ -435,7 +527,6 @@ function RandomGroupTool() {
       } else {
         players = players.sort(() => Math.random() - 0.5);
       }
-
       const result: PlayerIdentity[][] = Array.from({ length: groupCount }, () => []);
       players.forEach((p, i) => result[i % groupCount].push(p));
       setGroups(result);
@@ -443,71 +534,81 @@ function RandomGroupTool() {
     }, 600);
   };
 
-  const GROUP_COLORS = ['#6366f1', '#f43f5e', '#f59e0b', '#10b981', '#06b6d4', '#8b5cf6', '#ec4899', '#64748b'];
-
   return (
-    <div className="flex flex-col gap-4 h-full overflow-y-auto p-1">
-      {/* 设置 */}
-      <div className="space-y-3">
+    <div className="flex flex-col gap-4 h-full overflow-y-auto">
+      <div className="space-y-2">
         <div className="flex gap-1.5">
           {(['all', 'male', 'female'] as const).map(g => (
-            <button key={g} onClick={() => setFilterGender(g)}
-              className={cn('flex-1 text-xs py-1.5 rounded-lg border transition-all', filterGender === g ? 'border-amber-500/50 bg-amber-500/15 text-amber-300' : 'border-border text-muted-foreground hover:text-foreground')}>
+            <button key={g} onClick={() => setFilterGender(g)} className="flex-1 text-xs py-1.5 rounded-xl font-semibold transition-all" style={filterBtnStyle(filterGender === g, accent)}>
               {g === 'all' ? '不限' : g === 'male' ? '♂ 男' : '♀ 女'}
             </button>
           ))}
         </div>
         <div className="flex gap-1.5">
           {(['all', 'introvert', 'extrovert'] as const).map(s => (
-            <button key={s} onClick={() => setFilterSocial(s)}
-              className={cn('flex-1 text-xs py-1.5 rounded-lg border transition-all', filterSocial === s ? 'border-amber-500/50 bg-amber-500/15 text-amber-300' : 'border-border text-muted-foreground hover:text-foreground')}>
+            <button key={s} onClick={() => setFilterSocial(s)} className="flex-1 text-xs py-1.5 rounded-xl font-semibold transition-all" style={filterBtnStyle(filterSocial === s, accent)}>
               {s === 'all' ? '不限' : s === 'introvert' ? '🌙 社恐' : '☀️ 社牛'}
             </button>
           ))}
         </div>
-
-        <div className="space-y-1.5">
-          <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">分组数量</label>
-          <div className="flex items-center gap-1">
-            <button onClick={() => setGroupCount(c => Math.max(2, c - 1))} className="w-7 h-8 rounded-lg border border-border bg-secondary/50 hover:bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground transition-all"><Minus size={12} /></button>
-            <Input type="number" value={groupCount} min={2} onChange={e => setGroupCount(Math.max(2, parseInt(e.target.value) || 2))} className="flex-1 h-8 text-center text-sm bg-secondary/50 border-border" />
-            <button onClick={() => setGroupCount(c => c + 1)} className="w-7 h-8 rounded-lg border border-border bg-secondary/50 hover:bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground transition-all"><Plus size={12} /></button>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-secondary/30 border border-border">
-          <span className="text-sm font-medium">性别均衡分组</span>
-          <Switch checked={balanceGender} onCheckedChange={setBalanceGender} />
-        </div>
-
-        <div className="text-xs text-muted-foreground/60 text-center">参与玩家：{pool.length} 人 → 每组约 {Math.ceil(pool.length / groupCount)} 人</div>
-
-        <Button onClick={handleGroup} disabled={animating || pool.length === 0} className="w-full h-11 text-base font-bold gap-2 bg-amber-600 hover:bg-amber-500">
-          <Shuffle size={16} className={animating ? 'animate-spin' : ''} />
-          {animating ? '分组中...' : '随机分组'}
-        </Button>
       </div>
 
-      {/* 分组结果 */}
+      <div className="space-y-1.5">
+        <label className="text-xs font-bold tracking-widest uppercase" style={{ color: 'oklch(0.40 0.015 270)', letterSpacing: '0.1em' }}>分组数量</label>
+        <div className="flex items-center gap-1">
+          <button onClick={() => setGroupCount(c => Math.max(2, c - 1))} className="w-7 h-8 rounded-xl flex items-center justify-center" style={numBtnStyle}><Minus size={12} /></button>
+          <input type="number" value={groupCount} min={2} onChange={e => setGroupCount(Math.max(2, parseInt(e.target.value) || 2))} className="flex-1 h-8 text-center text-sm rounded-xl outline-none" style={numInputStyle} />
+          <button onClick={() => setGroupCount(c => c + 1)} className="w-7 h-8 rounded-xl flex items-center justify-center" style={numBtnStyle}><Plus size={12} /></button>
+        </div>
+      </div>
+
+      <div
+        className="flex items-center justify-between px-3 py-2.5 rounded-xl cursor-pointer"
+        style={{ background: 'oklch(0.155 0.022 270)', border: '1px solid oklch(0.22 0.022 270)' }}
+        onClick={() => setBalanceGender(v => !v)}
+      >
+        <span className="text-sm font-semibold" style={{ color: 'oklch(0.82 0.008 270)' }}>性别均衡分组</span>
+        <div className="w-9 h-5 rounded-full transition-all relative" style={{ background: balanceGender ? 'oklch(0.78 0.16 52 / 0.4)' : 'oklch(0.22 0.022 270)', border: `1px solid ${balanceGender ? accent : 'oklch(0.28 0.022 270)'}` }}>
+          <div className="absolute top-0.5 w-4 h-4 rounded-full transition-all" style={{ background: balanceGender ? accent : 'oklch(0.40 0.015 270)', left: balanceGender ? '18px' : '2px' }} />
+        </div>
+      </div>
+
+      <div className="text-xs text-center" style={{ color: 'oklch(0.40 0.015 270)' }}>
+        参与玩家：{pool.length} 人 → 每组约 {Math.ceil(pool.length / groupCount)} 人
+      </div>
+
+      <button
+        onClick={handleGroup}
+        disabled={animating || pool.length === 0}
+        className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all disabled:opacity-40"
+        style={{ background: 'oklch(0.78 0.16 52 / 0.15)', border: '1px solid oklch(0.78 0.16 52 / 0.4)', color: accent }}
+      >
+        <Shuffle size={15} className={animating ? 'animate-spin' : ''} />
+        {animating ? '分组中...' : '随机分组'}
+      </button>
+
       {groups.length > 0 && (
         <div className="space-y-2">
-          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">分组结果</div>
-          {groups.map((group, gi) => (
-            <div key={gi} className="rounded-xl border overflow-hidden" style={{ borderColor: GROUP_COLORS[gi % GROUP_COLORS.length] + '40' }}>
-              <div className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold" style={{ backgroundColor: GROUP_COLORS[gi % GROUP_COLORS.length] + '20', color: GROUP_COLORS[gi % GROUP_COLORS.length] }}>
-                <span>第 {gi + 1} 组</span>
-                <span className="ml-auto opacity-70">{group.length} 人</span>
+          <div className="text-xs font-bold tracking-widest uppercase" style={{ color: 'oklch(0.40 0.015 270)', letterSpacing: '0.1em' }}>分组结果</div>
+          {groups.map((group, gi) => {
+            const color = GROUP_ACCENT_COLORS[gi % GROUP_ACCENT_COLORS.length];
+            return (
+              <div key={gi} className="rounded-xl overflow-hidden" style={{ border: `1px solid ${color.replace(')', ' / 0.3)')}` }}>
+                <div className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold" style={{ background: `${color.replace(')', ' / 0.12)')}`, color }}>
+                  <span>第 {gi + 1} 组</span>
+                  <span className="ml-auto" style={{ opacity: 0.7 }}>{group.length} 人</span>
+                </div>
+                <div className="flex flex-wrap gap-1.5 px-3 py-2" style={{ background: 'oklch(0.155 0.022 270)' }}>
+                  {group.map(p => (
+                    <span key={p.id} className="font-mono-display text-sm font-bold px-2 py-0.5 rounded-lg" style={{ background: 'oklch(0.19 0.022 270)', color: 'oklch(0.82 0.008 270)', border: '1px solid oklch(0.26 0.022 270)' }}>
+                      #{p.number}
+                      {p.gender !== 'unknown' && <span className="ml-0.5 text-xs" style={{ color: 'oklch(0.55 0.02 270)' }}>{p.gender === 'male' ? '♂' : '♀'}</span>}
+                    </span>
+                  ))}
+                </div>
               </div>
-              <div className="flex flex-wrap gap-1.5 px-3 py-2 bg-secondary/10">
-                {group.map(p => (
-                  <span key={p.id} className="font-mono-display text-sm font-bold px-2 py-0.5 rounded-lg bg-secondary/50 text-foreground">
-                    #{p.number}
-                    {p.gender !== 'unknown' && <span className="ml-0.5 text-muted-foreground text-xs">{p.gender === 'male' ? '♂' : '♀'}</span>}
-                  </span>
-                ))}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
@@ -546,102 +647,126 @@ function CountdownTool() {
   }, [running]);
 
   const handleSetTime = (secs: number) => {
-    setTotalSeconds(secs);
-    setRemaining(secs);
-    setRunning(false);
-    setFinished(false);
+    setTotalSeconds(secs); setRemaining(secs); setRunning(false); setFinished(false);
   };
 
-  const handleReset = () => {
-    setRunning(false);
-    setFinished(false);
-    setRemaining(totalSeconds);
-  };
-
-  const handleToggle = () => {
-    if (finished) { handleReset(); return; }
-    setRunning(r => !r);
-  };
+  const handleReset = () => { setRunning(false); setFinished(false); setRemaining(totalSeconds); };
+  const handleToggle = () => { if (finished) { handleReset(); return; } setRunning(r => !r); };
 
   const handleCustomSet = () => {
     const secs = parseInt(customInput);
     if (!secs || secs <= 0) { toast.error('请输入有效秒数'); return; }
-    handleSetTime(secs);
-    setCustomInput('');
+    handleSetTime(secs); setCustomInput('');
   };
 
   const progress = totalSeconds > 0 ? remaining / totalSeconds : 0;
   const mins = Math.floor(remaining / 60);
   const secs = remaining % 60;
 
-  const getColor = () => {
-    if (finished) return '#f43f5e';
-    if (progress > 0.5) return '#10b981';
-    if (progress > 0.25) return '#f59e0b';
-    return '#f43f5e';
+  const getAccent = () => {
+    if (finished) return 'oklch(0.62 0.22 10)';
+    if (progress > 0.5) return 'oklch(0.65 0.18 155)';
+    if (progress > 0.25) return 'oklch(0.78 0.16 52)';
+    return 'oklch(0.62 0.22 10)';
   };
 
   const circumference = 2 * Math.PI * 90;
+  const accent = getAccent();
 
   return (
-    <div className="flex flex-col items-center gap-5 h-full overflow-y-auto p-1">
+    <div className="flex flex-col items-center gap-5 h-full overflow-y-auto">
       {/* 圆形进度 */}
       <div className="relative flex items-center justify-center">
         <svg width="220" height="220" className="-rotate-90">
-          <circle cx="110" cy="110" r="90" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="10" />
+          <circle cx="110" cy="110" r="90" fill="none" stroke="oklch(0.20 0.022 270)" strokeWidth="10" />
           <circle
             cx="110" cy="110" r="90"
             fill="none"
-            stroke={getColor()}
+            stroke={accent}
             strokeWidth="10"
             strokeLinecap="round"
             strokeDasharray={circumference}
             strokeDashoffset={circumference * (1 - progress)}
-            style={{ transition: 'stroke-dashoffset 0.8s ease, stroke 0.3s ease', filter: `drop-shadow(0 0 8px ${getColor()}80)` }}
+            style={{ transition: 'stroke-dashoffset 0.8s ease, stroke 0.3s ease', filter: `drop-shadow(0 0 10px ${accent}80)` }}
           />
         </svg>
         <div className="absolute flex flex-col items-center">
-          <div className={cn('font-mono-display text-5xl font-black tabular-nums transition-colors', finished && 'animate-pulse')} style={{ color: getColor() }}>
+          <div
+            className="font-mono-display tabular-nums transition-colors"
+            style={{
+              fontSize: '3rem',
+              fontWeight: 900,
+              color: accent,
+              textShadow: `0 0 24px ${accent}60`,
+              animation: finished ? 'pulse 1s infinite' : 'none',
+            }}
+          >
             {String(mins).padStart(2, '0')}:{String(secs).padStart(2, '0')}
           </div>
-          {finished && <div className="text-sm font-bold text-rose-400 mt-1 animate-bounce">时间到！</div>}
+          {finished && (
+            <div className="text-sm font-bold mt-1" style={{ color: 'oklch(0.62 0.22 10)', animation: 'bounce 1s infinite' }}>
+              时间到！
+            </div>
+          )}
         </div>
       </div>
 
       {/* 预设时间 */}
       <div className="flex flex-wrap gap-1.5 justify-center">
         {presets.map(p => (
-          <button key={p} onClick={() => handleSetTime(p)}
-            className={cn('text-xs px-2.5 py-1 rounded-lg border transition-all', totalSeconds === p && !running ? 'border-emerald-500/50 bg-emerald-500/15 text-emerald-300' : 'border-border text-muted-foreground hover:text-foreground')}>
+          <button
+            key={p}
+            onClick={() => handleSetTime(p)}
+            className="text-xs px-2.5 py-1 rounded-xl font-semibold transition-all"
+            style={filterBtnStyle(totalSeconds === p && !running, 'oklch(0.65 0.18 155)')}
+          >
             {p >= 60 ? `${p / 60}分` : `${p}秒`}
           </button>
         ))}
       </div>
 
-      {/* 自定义时间 */}
+      {/* 自定义 */}
       <div className="flex gap-2 w-full">
-        <Input
+        <input
           type="number"
           value={customInput}
           onChange={e => setCustomInput(e.target.value)}
           placeholder="自定义秒数..."
-          className="flex-1 h-8 text-sm bg-secondary/50 border-border"
+          className="flex-1 h-8 px-3 text-sm rounded-xl outline-none"
+          style={numInputStyle}
           onKeyDown={e => e.key === 'Enter' && handleCustomSet()}
         />
-        <Button size="sm" variant="outline" onClick={handleCustomSet} className="h-8 px-3">设置</Button>
+        <button
+          onClick={handleCustomSet}
+          className="px-3 h-8 rounded-xl text-sm font-semibold"
+          style={{ background: 'oklch(0.155 0.022 270)', border: '1px solid oklch(0.22 0.022 270)', color: 'oklch(0.60 0.02 270)' }}
+        >
+          设置
+        </button>
       </div>
 
       {/* 控制按钮 */}
       <div className="flex gap-3 w-full">
-        <Button
+        <button
           onClick={handleToggle}
-          className={cn('flex-1 h-12 text-base font-bold gap-2', finished ? 'bg-rose-600 hover:bg-rose-500' : running ? 'bg-amber-600 hover:bg-amber-500' : 'bg-emerald-600 hover:bg-emerald-500')}
+          className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all"
+          style={
+            finished
+              ? { background: 'oklch(0.62 0.22 10 / 0.2)', border: '1px solid oklch(0.62 0.22 10 / 0.5)', color: 'oklch(0.72 0.20 10)' }
+              : running
+              ? { background: 'oklch(0.78 0.16 52 / 0.2)', border: '1px solid oklch(0.78 0.16 52 / 0.5)', color: 'oklch(0.78 0.16 52)' }
+              : { background: 'oklch(0.65 0.18 155 / 0.2)', border: '1px solid oklch(0.65 0.18 155 / 0.5)', color: 'oklch(0.65 0.18 155)' }
+          }
         >
-          {finished ? <><RotateCcw size={16} />重置</> : running ? <><Pause size={16} />暂停</> : <><Play size={16} />开始</>}
-        </Button>
-        <Button variant="outline" onClick={handleReset} className="h-12 px-4">
-          <RotateCcw size={16} />
-        </Button>
+          {finished ? <><RotateCcw size={15} />重置</> : running ? <><Pause size={15} />暂停</> : <><Play size={15} />开始</>}
+        </button>
+        <button
+          onClick={handleReset}
+          className="px-4 py-3 rounded-xl transition-all"
+          style={{ background: 'oklch(0.155 0.022 270)', border: '1px solid oklch(0.22 0.022 270)', color: 'oklch(0.55 0.02 270)' }}
+        >
+          <RotateCcw size={15} />
+        </button>
       </div>
     </div>
   );
@@ -658,16 +783,16 @@ function DiceTool() {
   const [rolling, setRolling] = useState(false);
   const [displayFaces, setDisplayFaces] = useState<number[]>([]);
   const animRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const accent = 'oklch(0.68 0.18 200)';
 
   const handleRoll = () => {
     setRolling(true);
     let ticks = 0;
-    const maxTicks = 15;
     if (animRef.current) clearInterval(animRef.current);
     animRef.current = setInterval(() => {
       ticks++;
       setDisplayFaces(Array.from({ length: diceCount }, () => Math.floor(Math.random() * 6) + 1));
-      if (ticks >= maxTicks) {
+      if (ticks >= 15) {
         clearInterval(animRef.current!);
         const final = Array.from({ length: diceCount }, () => Math.floor(Math.random() * 6) + 1);
         setResults(final);
@@ -680,49 +805,72 @@ function DiceTool() {
   const total = results.reduce((s, n) => s + n, 0);
 
   return (
-    <div className="flex flex-col items-center gap-5 h-full overflow-y-auto p-1">
+    <div className="flex flex-col items-center gap-5 h-full overflow-y-auto">
       {/* 骰子展示 */}
-      <div className="flex flex-col items-center justify-center min-h-[180px] w-full rounded-2xl bg-gradient-to-br from-cyan-500/10 to-cyan-600/5 border border-cyan-500/20 relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(6,182,212,0.08),transparent_70%)]" />
+      <div
+        className="flex flex-col items-center justify-center min-h-[180px] w-full rounded-2xl relative overflow-hidden"
+        style={{
+          background: 'oklch(0.68 0.18 200 / 0.06)',
+          border: '1px solid oklch(0.68 0.18 200 / 0.2)',
+          boxShadow: displayFaces.length > 0 ? '0 0 32px oklch(0.68 0.18 200 / 0.08)' : 'none',
+        }}
+      >
         {displayFaces.length > 0 ? (
-          <div className="flex flex-wrap gap-4 justify-center p-4 relative z-10">
+          <div className="flex flex-wrap gap-4 justify-center p-4">
             {displayFaces.map((face, i) => (
-              <div key={i} className={cn('text-7xl transition-all select-none', rolling && 'animate-bounce')} style={{ animationDelay: `${i * 0.1}s` }}>
+              <div
+                key={i}
+                className="text-7xl select-none transition-all"
+                style={{
+                  animation: rolling ? `bounce 0.5s ${i * 0.1}s infinite` : 'none',
+                  filter: rolling ? 'none' : `drop-shadow(0 0 8px ${accent}60)`,
+                }}
+              >
                 {DICE_FACES[face - 1]}
               </div>
             ))}
           </div>
         ) : (
-          <div className="text-6xl opacity-20 relative z-10">🎲</div>
+          <div className="text-6xl opacity-20">🎲</div>
         )}
         {results.length > 1 && !rolling && (
-          <div className="text-sm text-cyan-400 font-bold relative z-10">总点数：{total}</div>
+          <div className="text-sm font-bold" style={{ color: accent }}>总点数：{total}</div>
         )}
       </div>
 
       {/* 骰子数量 */}
       <div className="space-y-1.5 w-full">
-        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">骰子数量</label>
+        <label className="text-xs font-bold tracking-widest uppercase" style={{ color: 'oklch(0.40 0.015 270)', letterSpacing: '0.1em' }}>骰子数量</label>
         <div className="flex items-center gap-2">
           {[1, 2, 3, 4, 5, 6].map(n => (
-            <button key={n} onClick={() => setDiceCount(n)}
-              className={cn('flex-1 h-9 rounded-lg border text-sm font-bold transition-all', diceCount === n ? 'border-cyan-500/50 bg-cyan-500/15 text-cyan-300' : 'border-border text-muted-foreground hover:text-foreground')}>
+            <button
+              key={n}
+              onClick={() => setDiceCount(n)}
+              className="flex-1 h-9 rounded-xl text-sm font-bold transition-all"
+              style={filterBtnStyle(diceCount === n, accent)}
+            >
               {n}
             </button>
           ))}
         </div>
       </div>
 
-      <Button onClick={handleRoll} disabled={rolling} className="w-full h-12 text-base font-bold gap-2 bg-cyan-700 hover:bg-cyan-600">
-        <Dice5 size={18} className={rolling ? 'animate-spin' : ''} />
+      <button
+        onClick={handleRoll}
+        disabled={rolling}
+        className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all disabled:opacity-40"
+        style={{ background: 'oklch(0.68 0.18 200 / 0.15)', border: '1px solid oklch(0.68 0.18 200 / 0.4)', color: accent }}
+      >
+        <Dice5 size={15} className={rolling ? 'animate-spin' : ''} />
         {rolling ? '掷骰中...' : '掷骰子'}
-      </Button>
+      </button>
 
-      {/* 历史 */}
       {results.length > 0 && !rolling && (
-        <div className="w-full px-3 py-2 rounded-xl bg-secondary/20 border border-border text-center">
-          <div className="text-xs text-muted-foreground mb-1">结果</div>
-          <div className="font-mono-display text-2xl font-bold text-cyan-300">{results.join(' + ')}{results.length > 1 && ` = ${total}`}</div>
+        <div className="w-full px-4 py-3 rounded-xl text-center" style={{ background: 'oklch(0.155 0.022 270)', border: '1px solid oklch(0.22 0.022 270)' }}>
+          <div className="text-xs mb-1" style={{ color: 'oklch(0.40 0.015 270)' }}>结果</div>
+          <div className="font-mono-display text-2xl font-bold" style={{ color: accent }}>
+            {results.join(' + ')}{results.length > 1 && ` = ${total}`}
+          </div>
         </div>
       )}
     </div>
@@ -734,6 +882,7 @@ function DiceTool() {
 // ============================================================
 export default function ToolsPage() {
   const [activeTool, setActiveTool] = useState<ToolId>('random-number');
+  const activeMeta = TOOLS.find(t => t.id === activeTool)!;
 
   const renderTool = () => {
     switch (activeTool) {
@@ -745,49 +894,83 @@ export default function ToolsPage() {
     }
   };
 
-  const activeMeta = TOOLS.find(t => t.id === activeTool)!;
-
   return (
     <div className="h-full flex overflow-hidden">
-      {/* 左侧工具导航 */}
-      <div className="w-48 flex-shrink-0 border-r border-border flex flex-col overflow-hidden">
-        <div className="px-3 py-2.5 border-b border-border flex-shrink-0">
-          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">工具箱</span>
+
+      {/* ============================================================
+          左侧工具导航
+          ============================================================ */}
+      <div
+        className="w-48 flex-shrink-0 flex flex-col overflow-hidden"
+        style={{ background: 'oklch(0.115 0.022 270)', borderRight: '1px solid oklch(0.20 0.022 270)' }}
+      >
+        <div
+          className="px-4 py-3 flex-shrink-0 flex items-center gap-2"
+          style={{ borderBottom: '1px solid oklch(0.18 0.02 270)' }}
+        >
+          <div className="w-1.5 h-4 rounded-full" style={{ background: 'oklch(0.60 0.20 285)' }} />
+          <span className="text-sm font-bold" style={{ color: 'oklch(0.82 0.008 270)' }}>工具箱</span>
         </div>
-        <div className="flex-1 overflow-y-auto px-2 py-2 space-y-1">
-          {TOOLS.map(tool => (
-            <button
-              key={tool.id}
-              onClick={() => setActiveTool(tool.id)}
-              className={cn(
-                'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all text-left',
-                activeTool === tool.id
-                  ? 'border-opacity-50 text-foreground'
-                  : 'border-border bg-secondary/20 hover:bg-secondary/50 text-muted-foreground hover:text-foreground'
-              )}
-              style={activeTool === tool.id ? { borderColor: tool.color + '60', backgroundColor: tool.color + '15', color: tool.color } : {}}
-            >
-              <span style={activeTool === tool.id ? { color: tool.color } : {}}>{tool.icon}</span>
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-semibold truncate">{tool.label}</div>
-                <div className="text-[10px] text-muted-foreground/60 truncate">{tool.desc}</div>
-              </div>
-              {activeTool === tool.id && <ChevronRight size={12} style={{ color: tool.color }} />}
-            </button>
-          ))}
+        <div className="flex-1 overflow-y-auto px-2.5 py-2 space-y-1">
+          {TOOLS.map(tool => {
+            const isActive = activeTool === tool.id;
+            return (
+              <button
+                key={tool.id}
+                onClick={() => setActiveTool(tool.id)}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-left"
+                style={
+                  isActive
+                    ? {
+                        background: `${tool.accentColor.replace(')', ' / 0.12)')}`,
+                        border: `1px solid ${tool.accentColor.replace(')', ' / 0.3)')}`,
+                      }
+                    : {
+                        background: 'oklch(0.155 0.022 270)',
+                        border: '1px solid oklch(0.22 0.022 270)',
+                      }
+                }
+                onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'oklch(0.185 0.025 270)'; }}
+                onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'oklch(0.155 0.022 270)'; }}
+              >
+                <span style={{ color: isActive ? tool.accentColor : 'oklch(0.50 0.015 270)' }}>{tool.icon}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-semibold truncate" style={{ color: isActive ? tool.accentColor : 'oklch(0.72 0.015 270)' }}>
+                    {tool.label}
+                  </div>
+                  <div className="text-[10px] truncate" style={{ color: 'oklch(0.40 0.015 270)' }}>{tool.desc}</div>
+                </div>
+                {isActive && <ChevronRight size={12} style={{ color: tool.accentColor, flexShrink: 0 }} />}
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* 右侧工具内容 */}
+      {/* ============================================================
+          右侧工具内容
+          ============================================================ */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* 工具标题栏 */}
-        <div className="flex items-center gap-3 px-5 py-3 border-b border-border flex-shrink-0">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: activeMeta.color + '20', color: activeMeta.color }}>
+        <div
+          className="flex items-center gap-3 px-5 py-3 flex-shrink-0"
+          style={{ borderBottom: '1px solid oklch(0.20 0.022 270)' }}
+        >
+          <div
+            className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+            style={{
+              background: `${activeMeta.accentColor.replace(')', ' / 0.15)')}`,
+              border: `1px solid ${activeMeta.accentColor.replace(')', ' / 0.3)')}`,
+              color: activeMeta.accentColor,
+            }}
+          >
             {activeMeta.icon}
           </div>
           <div>
-            <div className="font-bold text-foreground">{activeMeta.label}</div>
-            <div className="text-xs text-muted-foreground">{activeMeta.desc}</div>
+            <div className="font-bold" style={{ color: 'oklch(0.88 0.008 270)', fontFamily: "'Noto Serif SC', serif" }}>
+              {activeMeta.label}
+            </div>
+            <div className="text-xs" style={{ color: 'oklch(0.45 0.015 270)' }}>{activeMeta.desc}</div>
           </div>
         </div>
 
