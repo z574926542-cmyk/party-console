@@ -26,6 +26,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'pnpm'
 
       - name: Use desktop package.json
         run: cp package.desktop.json package.json
@@ -39,17 +40,27 @@ jobs:
           ELECTRON_BUILD: '1'
           NODE_ENV: production
 
-      - name: Package macOS app
+      - name: Package macOS app (dmg)
         run: npx electron-builder --mac --config electron-builder.yml --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
           NODE_ENV: production
 
-      - name: Upload macOS App
+      - name: List release files
+        run: ls -lh release/
+
+      - name: Upload macOS DMG (x64)
         uses: actions/upload-artifact@v4
         with:
-          name: mac-app
-          path: release/*.zip
+          name: mac-dmg-x64
+          path: release/*x64*.dmg
+          retention-days: 30
+
+      - name: Upload macOS DMG (arm64)
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac-dmg-arm64
+          path: release/*arm64*.dmg
           retention-days: 30
 
   build-win:
@@ -66,6 +77,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'pnpm'
 
       - name: Use desktop package.json
         shell: pwsh
@@ -85,42 +97,68 @@ jobs:
         env:
           NODE_ENV: production
 
+      - name: List release files
+        shell: pwsh
+        run: Get-ChildItem release/ | Format-Table Name, Length
+
       - name: Upload Windows installer
         uses: actions/upload-artifact@v4
         with:
-          name: win-installer
+          name: win-installer-x64
           path: release/*.exe
           retention-days: 30
 
   release:
-    name: Create Release
+    name: Create GitHub Release
     needs: [build-mac, build-win]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
     steps:
-      - name: Download macOS artifact
+      - name: Download macOS DMG (x64)
         uses: actions/download-artifact@v4
         with:
-          name: mac-app
+          name: mac-dmg-x64
           path: release/mac
 
-      - name: Download Windows artifact
+      - name: Download macOS DMG (arm64)
         uses: actions/download-artifact@v4
         with:
-          name: win-installer
+          name: mac-dmg-arm64
+          path: release/mac
+
+      - name: Download Windows installer
+        uses: actions/download-artifact@v4
+        with:
+          name: win-installer-x64
           path: release/win
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: PartyConsole ${{ github.ref_name }}
+          name: 奇妙奇遇控制台 ${{ github.ref_name }}
           body: |
-            ## PartyConsole ${{ github.ref_name }}
+            ## 奇妙奇遇控制台 ${{ github.ref_name }}
 
-            - **macOS**: Download `.dmg`, open and drag app to Applications
-            - **Windows**: Download `.exe`, run the installer
+            ### 下载安装
+
+            | 平台 | 文件 | 说明 |
+            |------|------|------|
+            | macOS (Intel) | `*x64.dmg` | 适用于 Intel Mac |
+            | macOS (Apple Silicon) | `*arm64.dmg` | 适用于 M1/M2/M3 Mac |
+            | Windows | `*.exe` | Windows 10/11 安装包 |
+
+            ### macOS 安装说明
+            1. 下载对应架构的 `.dmg` 文件
+            2. 打开 dmg，将应用拖入 Applications 文件夹
+            3. 首次打开时若提示“无法验证开发者”，请前往「系统偏好设置 → 安全性与隐私」点击「仍要打开」
+
+            ### Windows 安装说明
+            1. 下载 `.exe` 安装包
+            2. 运行安装程序，按提示完成安装
           files: |
-            release/mac/*.zip
+            release/mac/*.dmg
             release/win/*.exe
           draft: false
           prerelease: false

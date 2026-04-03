@@ -28,15 +28,30 @@ files:
 extraMetadata:
   main: electron/main.js
 
-# macOS
+# macOS - build dmg for both Intel and Apple Silicon
 mac:
   category: public.app-category.entertainment
   darkModeSupport: true
   target:
-    - target: zip
+    - target: dmg
       arch:
         - x64
         - arm64
+
+dmg:
+  title: "奇妙奇遇控制台"
+  backgroundColor: "#f0eaf8"
+  window:
+    width: 540
+    height: 380
+  contents:
+    - x: 130
+      y: 200
+      type: file
+    - x: 410
+      y: 200
+      type: link
+      path: /Applications
 
 # Windows
 win:
