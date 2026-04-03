@@ -1,5 +1,5 @@
 appId: com.partyConsole.app
-productName: 奇妙奇遇游戏控制台
+productName: PartyConsole
 copyright: Copyright © 2025
 
 # 应用图标
@@ -37,7 +37,7 @@ mac:
   darkModeSupport: true
 
 dmg:
-  title: 奇妙奇遇游戏控制台
+  title: PartyConsole
 
 # Windows 配置
 win:
@@ -52,7 +52,7 @@ nsis:
   allowToChangeInstallationDirectory: true
   createDesktopShortcut: true
   createStartMenuShortcut: true
-  shortcutName: 奇妙奇遇游戏控制台
+  shortcutName: PartyConsole
   installerLanguages:
     - zh_CN
   language: 2052

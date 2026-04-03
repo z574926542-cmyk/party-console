@@ -14,7 +14,7 @@ function createWindow() {
     height: 900,
     minWidth: 1024,
     minHeight: 700,
-    title: '奇妙奇遇游戏控制台',
+    title: '奇妙奇遇——游戏控制台',
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
