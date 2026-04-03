@@ -65,16 +65,42 @@ const INITIAL_STATE: AppState = {
   lastUpdated: Date.now(),
 };
 
+// ---- 数据迁移：补全旧版游戏对象缺失字段 ----
+function migrateGame(g: any): Game {
+  return {
+    id: g.id || nanoid(),
+    name: g.name || '无标题游戏',
+    rules: g.rules || '',
+    winnerSettlement: g.winnerSettlement || '',
+    loserSettlement: g.loserSettlement || '',
+    settlementImages: Array.isArray(g.settlementImages) ? g.settlementImages : [],
+    tools: Array.isArray(g.tools) ? g.tools : [],
+    tags: Array.isArray(g.tags) ? g.tags : [],
+    notes: g.notes || '',
+    createdAt: g.createdAt || Date.now(),
+    updatedAt: g.updatedAt || Date.now(),
+  };
+}
+
 // ---- 存储工具函数 ----
 export function loadState(): AppState {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return INITIAL_STATE;
     const parsed = JSON.parse(raw) as Partial<AppState>;
+    // 迁移游戏列表数据，补全缺失字段（如 settlementImages）
+    const migratedGameLibrary = Array.isArray(parsed.gameLibrary)
+      ? parsed.gameLibrary.map(migrateGame)
+      : INITIAL_STATE.gameLibrary;
+    const migratedCurrentGameList = Array.isArray(parsed.currentGameList)
+      ? parsed.currentGameList.map((item: any) => ({ ...item, gameData: migrateGame(item.gameData) }))
+      : INITIAL_STATE.currentGameList;
     // 合并默认值，防止字段缺失
     return {
       ...INITIAL_STATE,
       ...parsed,
+      gameLibrary: migratedGameLibrary,
+      currentGameList: migratedCurrentGameList,
       tags: parsed.tags && parsed.tags.length > 0 ? parsed.tags : DEFAULT_TAGS,
       wheels: parsed.wheels && parsed.wheels.length > 0 ? parsed.wheels : [DEFAULT_WHEEL],
       players: parsed.players && parsed.players.length > 0 ? parsed.players : INITIAL_STATE.players,

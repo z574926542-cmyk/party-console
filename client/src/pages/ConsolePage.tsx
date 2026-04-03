@@ -315,12 +315,25 @@ interface GameEditorProps {
   onSaveToLibrary: () => void;
 }
 
+function safeDraft(g: Game): Game {
+  return {
+    ...g,
+    name: g.name || '无标题游戏',
+    rules: g.rules || '',
+    winnerSettlement: g.winnerSettlement || '',
+    loserSettlement: g.loserSettlement || '',
+    settlementImages: Array.isArray(g.settlementImages) ? g.settlementImages : [],
+    tools: Array.isArray(g.tools) ? g.tools : [],
+    tags: Array.isArray(g.tags) ? g.tags : [],
+    notes: g.notes || '',
+  };
+}
 function GameEditor({ game, players, wheels, tags, onSave, onLoadToStage, onSaveToLibrary }: GameEditorProps) {
-  const [draft, setDraft] = useState<Game>({ ...game });
+  const [draft, setDraft] = useState<Game>(() => safeDraft(game));
   const [showToolModal, setShowToolModal] = useState<'pick' | 'group' | 'countdown' | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { setDraft({ ...game }); }, [game.id]);
+  useEffect(() => { setDraft(safeDraft(game)); }, [game.id]);
 
   const update = (patch: Partial<Game>) => {
     const updated = { ...draft, ...patch, updatedAt: Date.now() };

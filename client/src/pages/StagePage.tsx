@@ -545,8 +545,8 @@ export default function StagePage() {
             {/* 游戏规则 */}
             {currentGame.rules && (
               <div className="glass-card p-5">
-                <div className="text-sm font-bold uppercase tracking-widest mb-4" style={{ color: 'oklch(0.55 0.06 280)' }}>游戏规则</div>
-                <p className="text-lg leading-loose whitespace-pre-wrap font-medium" style={{ color: 'oklch(0.22 0.02 280)' }}>
+                <div className="text-base font-black uppercase tracking-widest mb-5" style={{ color: 'oklch(0.55 0.06 280)', letterSpacing: '0.15em' }}>游戏规则</div>
+                <p className="text-3xl leading-relaxed whitespace-pre-wrap font-bold" style={{ color: 'oklch(0.15 0.02 280)', letterSpacing: '0.01em' }}>
                   {currentGame.rules}
                 </p>
               </div>
@@ -568,7 +568,7 @@ export default function StagePage() {
                   </button>
                 </div>
                 {currentGame.winnerSettlement && (
-                  <p className="text-xl font-bold mt-1" style={{ color: 'oklch(0.25 0.06 155)' }}>{currentGame.winnerSettlement}</p>
+                  <p className="text-2xl font-black mt-2 leading-snug" style={{ color: 'oklch(0.20 0.08 155)' }}>{currentGame.winnerSettlement}</p>
                 )}
               </div>
 
@@ -586,7 +586,7 @@ export default function StagePage() {
                   </button>
                 </div>
                 {currentGame.loserSettlement && (
-                  <p className="text-xl font-bold mt-1" style={{ color: 'oklch(0.30 0.08 340)' }}>{currentGame.loserSettlement}</p>
+                  <p className="text-2xl font-black mt-2 leading-snug" style={{ color: 'oklch(0.25 0.10 340)' }}>{currentGame.loserSettlement}</p>
                 )}
               </div>
             </div>
