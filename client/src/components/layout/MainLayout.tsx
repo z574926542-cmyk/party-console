@@ -1,65 +1,42 @@
 // ============================================================
-// 主布局 - 侧边栏导航
-// Design: 奇妙奇遇 v2 — 微醺夜晚社交娱乐品牌控制台
-// Sidebar: 深底，金色品牌标识，精致导航项
+// 奇妙奇遇控制台 - 顶部导航布局（亮色渐变风）
 // ============================================================
 
 import React from 'react';
 import { useLocation, Link } from 'wouter';
-import {
-  LayoutGrid,
-  Tv2,
-  Disc3,
-  ShoppingBag,
-  Zap,
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
 
 const NAV_ITEMS = [
   {
     path: '/',
     label: '控制台',
-    icon: LayoutGrid,
-    description: '编排 · 身份',
-    accent: 'oklch(0.78 0.16 52)',       // 金
-    accentBg: 'oklch(0.78 0.16 52 / 0.12)',
-    accentBorder: 'oklch(0.78 0.16 52 / 0.3)',
+    emoji: '\uD83C\uDFAE',
+    gradient: 'linear-gradient(135deg, #ec407a, #7c4dff)',
+    shadow: 'rgba(124, 77, 255, 0.35)',
+    hoverBg: 'rgba(236, 64, 122, 0.08)',
   },
   {
     path: '/stage',
     label: '展台',
-    icon: Tv2,
-    description: '现场主持',
-    accent: 'oklch(0.65 0.18 155)',      // 翠绿
-    accentBg: 'oklch(0.65 0.18 155 / 0.12)',
-    accentBorder: 'oklch(0.65 0.18 155 / 0.3)',
+    emoji: '\uD83C\uDFAC',
+    gradient: 'linear-gradient(135deg, #42a5f5, #26c6da)',
+    shadow: 'rgba(66, 165, 245, 0.35)',
+    hoverBg: 'rgba(66, 165, 245, 0.08)',
   },
   {
     path: '/wheel',
     label: '轮盘',
-    icon: Disc3,
-    description: '抽奖 · 随机',
-    accent: 'oklch(0.60 0.20 285)',      // 冷紫
-    accentBg: 'oklch(0.60 0.20 285 / 0.12)',
-    accentBorder: 'oklch(0.60 0.20 285 / 0.3)',
+    emoji: '\uD83C\uDFAF',
+    gradient: 'linear-gradient(135deg, #ff8a65, #ffca28)',
+    shadow: 'rgba(255, 138, 101, 0.35)',
+    hoverBg: 'rgba(255, 138, 101, 0.08)',
   },
   {
     path: '/peripheral',
     label: '周边',
-    icon: ShoppingBag,
-    description: '清单 · 记录',
-    accent: 'oklch(0.75 0.18 65)',       // 琥珀
-    accentBg: 'oklch(0.75 0.18 65 / 0.12)',
-    accentBorder: 'oklch(0.75 0.18 65 / 0.3)',
-  },
-  {
-    path: '/tools',
-    label: '工具',
-    icon: Zap,
-    description: '随机 · 计时',
-    accent: 'oklch(0.62 0.22 10)',       // 酒红
-    accentBg: 'oklch(0.62 0.22 10 / 0.12)',
-    accentBorder: 'oklch(0.62 0.22 10 / 0.3)',
+    emoji: '\uD83C\uDF81',
+    gradient: 'linear-gradient(135deg, #66bb6a, #26c6da)',
+    shadow: 'rgba(102, 187, 106, 0.35)',
+    hoverBg: 'rgba(102, 187, 106, 0.08)',
   },
 ];
 
@@ -70,179 +47,112 @@ interface MainLayoutProps {
 export default function MainLayout({ children }: MainLayoutProps) {
   const [location] = useLocation();
 
-  return (
-    <div className="flex h-screen w-screen overflow-hidden bg-background">
+  const isActive = (path: string) => {
+    if (path === '/') return location === '/';
+    return location.startsWith(path);
+  };
 
-      {/* ============================================================
-          左侧导航栏
-          ============================================================ */}
-      <aside
-        className="w-52 flex-shrink-0 flex flex-col overflow-hidden"
+  return (
+    <div
+      className="min-h-screen flex flex-col"
+      style={{
+        background: 'linear-gradient(135deg, #fce4ec 0%, #e8eaf6 35%, #e0f7fa 70%, #f3e5f5 100%)',
+        backgroundAttachment: 'fixed',
+      }}
+    >
+      {/* ---- 顶部导航栏 ---- */}
+      <header
+        className="sticky top-0 z-40 h-16 flex items-center px-6 gap-3"
         style={{
-          background: 'var(--sidebar)',
-          borderRight: '1px solid oklch(0.20 0.022 270)',
+          background: 'rgba(255, 255, 255, 0.72)',
+          backdropFilter: 'blur(24px)',
+          WebkitBackdropFilter: 'blur(24px)',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.5)',
+          boxShadow: '0 2px 16px rgba(100, 80, 180, 0.08)',
         }}
       >
-        {/* ---- Logo 区域 ---- */}
-        <div
-          className="px-5 py-5 flex-shrink-0"
-          style={{ borderBottom: '1px solid oklch(0.18 0.02 270)' }}
-        >
-          <div className="flex items-center gap-3">
-            {/* 品牌图标：金色星芒 */}
+        {/* 品牌 */}
+        <div className="flex items-center gap-2.5 mr-6 shrink-0">
+          <div
+            className="w-9 h-9 rounded-2xl flex items-center justify-center text-white font-black text-sm shadow-md"
+            style={{ background: 'linear-gradient(135deg, #ec407a, #7c4dff)' }}
+          >
+            奇
+          </div>
+          <div>
             <div
-              className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
-              style={{
-                background: 'linear-gradient(135deg, oklch(0.82 0.17 52), oklch(0.65 0.14 45))',
-                boxShadow: '0 2px 8px oklch(0.78 0.16 52 / 0.4)',
-              }}
+              className="text-sm font-black leading-tight"
+              style={{ color: 'oklch(0.22 0.02 280)', letterSpacing: '-0.01em' }}
             >
-              <span style={{ fontSize: '14px', lineHeight: 1 }}>✦</span>
+              奇妙奇遇控制台
             </div>
-            <div className="min-w-0">
-              <div
-                className="font-bold leading-tight tracking-wide"
-                style={{
-                  fontSize: '0.9rem',
-                  color: 'oklch(0.90 0.01 270)',
-                  fontFamily: "'Sora', sans-serif",
-                }}
-              >
-                奇妙奇遇
-              </div>
-              <div
-                style={{
-                  fontSize: '0.6rem',
-                  letterSpacing: '0.15em',
-                  color: 'oklch(0.45 0.02 270)',
-                  textTransform: 'uppercase',
-                  fontFamily: "'Sora', sans-serif",
-                  marginTop: '1px',
-                }}
-              >
-                Game Console
-              </div>
+            <div className="text-[10px] leading-tight" style={{ color: 'oklch(0.60 0.06 310)' }}>
+              v1.0 · 本地离线
             </div>
           </div>
         </div>
 
-        {/* ---- 导航项 ---- */}
-        <nav className="flex-1 px-2.5 py-3 space-y-0.5 overflow-y-auto">
-          {NAV_ITEMS.map(item => {
-            const isActive = location === item.path;
-            const Icon = item.icon;
-
+        {/* 导航项 */}
+        <nav className="flex items-center gap-1">
+          {NAV_ITEMS.map((item) => {
+            const active = isActive(item.path);
             return (
               <Link key={item.path} href={item.path}>
-                <div
-                  className={cn(
-                    'flex items-center gap-2.5 px-3 py-2.5 rounded-xl cursor-pointer transition-all duration-200 group relative',
-                  )}
+                <button
+                  className="flex items-center gap-2 px-4 py-2 rounded-2xl text-sm font-bold transition-all duration-200"
                   style={
-                    isActive
+                    active
                       ? {
-                          background: item.accentBg,
-                          border: `1px solid ${item.accentBorder}`,
+                          background: item.gradient,
+                          color: 'white',
+                          boxShadow: `0 4px 14px ${item.shadow}`,
                         }
                       : {
-                          border: '1px solid transparent',
+                          background: 'transparent',
+                          color: 'oklch(0.42 0.04 280)',
                         }
                   }
-                  onMouseEnter={e => {
-                    if (!isActive) {
-                      (e.currentTarget as HTMLElement).style.background = 'oklch(0.18 0.022 270)';
-                      (e.currentTarget as HTMLElement).style.borderColor = 'oklch(0.24 0.022 270)';
+                  onMouseEnter={(e) => {
+                    if (!active) {
+                      (e.currentTarget as HTMLButtonElement).style.background = item.hoverBg;
+                      (e.currentTarget as HTMLButtonElement).style.color = 'oklch(0.30 0.08 310)';
                     }
                   }}
-                  onMouseLeave={e => {
-                    if (!isActive) {
-                      (e.currentTarget as HTMLElement).style.background = '';
-                      (e.currentTarget as HTMLElement).style.borderColor = 'transparent';
+                  onMouseLeave={(e) => {
+                    if (!active) {
+                      (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
+                      (e.currentTarget as HTMLButtonElement).style.color = 'oklch(0.42 0.04 280)';
                     }
                   }}
                 >
-                  {/* 图标 */}
-                  <div
-                    className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-all duration-200"
-                    style={
-                      isActive
-                        ? {
-                            background: `${item.accent}22`,
-                            color: item.accent,
-                          }
-                        : {
-                            color: 'oklch(0.50 0.02 270)',
-                          }
-                    }
-                  >
-                    <Icon size={14} />
-                  </div>
-
-                  {/* 文字 */}
-                  <div className="flex-1 min-w-0">
-                    <div
-                      className="text-sm font-semibold leading-tight transition-colors"
-                      style={{
-                        color: isActive ? item.accent : 'oklch(0.65 0.02 270)',
-                        fontFamily: "'Sora', 'Noto Sans SC', sans-serif",
-                      }}
-                    >
-                      {item.label}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: '0.65rem',
-                        color: 'oklch(0.42 0.015 270)',
-                        marginTop: '1px',
-                        letterSpacing: '0.02em',
-                      }}
-                    >
-                      {item.description}
-                    </div>
-                  </div>
-
-                  {/* 活跃指示点 */}
-                  {isActive && (
-                    <div
-                      className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                      style={{
-                        background: item.accent,
-                        boxShadow: `0 0 6px ${item.accent}`,
-                      }}
-                    />
-                  )}
-                </div>
+                  <span style={{ fontSize: '16px' }}>{item.emoji}</span>
+                  {item.label}
+                </button>
               </Link>
             );
           })}
         </nav>
 
-        {/* ---- 底部状态 ---- */}
-        <div
-          className="px-4 py-3 flex-shrink-0"
-          style={{ borderTop: '1px solid oklch(0.18 0.02 270)' }}
-        >
-          <div className="flex items-center gap-2">
+        {/* 右侧状态 */}
+        <div className="ml-auto">
+          <div
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full font-medium"
+            style={{
+              background: 'rgba(200, 180, 240, 0.2)',
+              color: 'oklch(0.52 0.08 310)',
+            }}
+          >
             <div
               className="w-1.5 h-1.5 rounded-full animate-pulse"
               style={{ background: 'oklch(0.65 0.18 155)' }}
             />
-            <span
-              style={{
-                fontSize: '0.6rem',
-                color: 'oklch(0.40 0.015 270)',
-                letterSpacing: '0.05em',
-                fontFamily: "'Sora', sans-serif",
-              }}
-            >
-              v1.0 · 本地离线
-            </span>
+            本地存储
           </div>
         </div>
-      </aside>
+      </header>
 
-      {/* ---- 右侧内容区 ---- */}
-      <main className="flex-1 overflow-hidden animate-fade-in">
+      {/* ---- 内容区域 ---- */}
+      <main className="flex-1 overflow-auto">
         {children}
       </main>
     </div>

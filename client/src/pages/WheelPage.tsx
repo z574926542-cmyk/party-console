@@ -1,277 +1,171 @@
-// ============================================================
-// 轮盘页面
-// Design: 奇妙奇遇 v2 — 舞台感 · 微醺夜晚 · 轮盘仪式感
-// ============================================================
+// 奇妙奇遇控制台 - 轮盘页面（亮色渐变风）
+// 固定三个默认轮盘：抽奖 / 惩罚 / 挑战
+// 可折叠配置面板，选人并开始，周边属性自动同步
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useApp } from '@/contexts/AppContext';
-import { Wheel, WheelOption } from '@/types';
 import { nanoid } from 'nanoid';
 import { toast } from 'sonner';
-import {
-  Plus, Trash2, Edit3, X, Check, RotateCcw,
-  Download, Upload, Layers, Info, History
-} from 'lucide-react';
+import type { Wheel, WheelOption, WheelHistoryEntry, PlayerIdentity } from '@/types';
 
-// ============================================================
-// 颜色预设 — 偏向微醺夜晚调色板
-// ============================================================
-const OPTION_COLORS = [
-  '#c084fc', '#f472b6', '#fb923c', '#facc15', '#4ade80',
-  '#22d3ee', '#818cf8', '#f87171', '#a3e635', '#34d399',
-  '#60a5fa', '#e879f9', '#fbbf24', '#2dd4bf', '#94a3b8'
-];
+const DEFAULT_IDS = ['wheel-default-lottery', 'wheel-default-penalty', 'wheel-default-challenge'];
 
-// ============================================================
-// 轮盘画布
-// ============================================================
-interface WheelCanvasProps {
-  wheel: Wheel;
-  rotation: number;
-  spinning: boolean;
-  size?: number;
+function useEnsureDefaultWheels() {
+  const { state, dispatch } = useApp();
+  useEffect(() => {
+    const defaults: Wheel[] = [
+      {
+        id: 'wheel-default-lottery', name: '抽奖', isDefault: true,
+        options: [
+          { id: 'opt-l1', label: '一等奖', weight: 1, color: '#f59e0b', isPeripheral: true },
+          { id: 'opt-l2', label: '二等奖', weight: 2, color: '#6366f1', isPeripheral: true },
+          { id: 'opt-l3', label: '三等奖', weight: 3, color: '#10b981', isPeripheral: true },
+          { id: 'opt-l4', label: '安慰奖', weight: 4, color: '#06b6d4', isPeripheral: false },
+          { id: 'opt-l5', label: '再来一次', weight: 3, color: '#f43f5e', isPeripheral: false },
+          { id: 'opt-l6', label: '谢谢参与', weight: 5, color: '#64748b', isPeripheral: false },
+        ],
+        history: [], createdAt: Date.now(), updatedAt: Date.now(),
+      },
+      {
+        id: 'wheel-default-penalty', name: '惩罚', isDefault: true,
+        options: [
+          { id: 'opt-p1', label: '喝一杯', weight: 3, color: '#ef4444', isPeripheral: false },
+          { id: 'opt-p2', label: '唱一首歌', weight: 2, color: '#f97316', isPeripheral: false },
+          { id: 'opt-p3', label: '讲个笑话', weight: 3, color: '#eab308', isPeripheral: false },
+          { id: 'opt-p4', label: '俯卧撑', weight: 2, color: '#ec4899', isPeripheral: false },
+          { id: 'opt-p5', label: '真心话', weight: 3, color: '#8b5cf6', isPeripheral: false },
+          { id: 'opt-p6', label: '大冒险', weight: 2, color: '#06b6d4', isPeripheral: false },
+        ],
+        history: [], createdAt: Date.now(), updatedAt: Date.now(),
+      },
+      {
+        id: 'wheel-default-challenge', name: '挑战', isDefault: true,
+        options: [
+          { id: 'opt-c1', label: '才艺展示', weight: 2, color: '#6366f1', isPeripheral: false },
+          { id: 'opt-c2', label: '猜谜题', weight: 3, color: '#10b981', isPeripheral: false },
+          { id: 'opt-c3', label: '绕口令', weight: 3, color: '#f59e0b', isPeripheral: false },
+          { id: 'opt-c4', label: '肢体挑战', weight: 2, color: '#ef4444', isPeripheral: false },
+          { id: 'opt-c5', label: '即兴表演', weight: 2, color: '#ec4899', isPeripheral: false },
+          { id: 'opt-c6', label: '知识问答', weight: 3, color: '#06b6d4', isPeripheral: false },
+        ],
+        history: [], createdAt: Date.now(), updatedAt: Date.now(),
+      },
+    ];
+    defaults.forEach(dw => {
+      if (!state.wheels.find(w => w.id === dw.id)) {
+        dispatch({ type: 'ADD_WHEEL', payload: dw });
+      }
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 }
 
-function WheelCanvas({ wheel, rotation, spinning, size = 340 }: WheelCanvasProps) {
+function WheelCanvas({ options, rotation }: { options: WheelOption[]; rotation: number }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-
   useEffect(() => {
-    drawWheel();
-  }, [wheel, rotation]);
-
-  const drawWheel = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+    const size = 380;
     const cx = size / 2, cy = size / 2, r = size / 2 - 8;
     ctx.clearRect(0, 0, size, size);
-
-    // 外圈发光
-    ctx.save();
-    ctx.shadowColor = 'rgba(192, 132, 252, 0.4)';
-    ctx.shadowBlur = 24;
-    ctx.beginPath();
-    ctx.arc(cx, cy, r + 4, 0, 2 * Math.PI);
-    ctx.strokeStyle = 'rgba(192, 132, 252, 0.25)';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    ctx.restore();
-
-    if (wheel.options.length === 0) {
-      ctx.fillStyle = 'oklch(0.155 0.022 270)';
-      ctx.beginPath();
-      ctx.arc(cx, cy, r, 0, 2 * Math.PI);
-      ctx.fill();
-      ctx.fillStyle = 'rgba(255,255,255,0.3)';
-      ctx.font = `14px 'Noto Sans SC', sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('请添加选项', cx, cy);
+    if (options.length === 0) {
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, 2 * Math.PI);
+      ctx.fillStyle = 'rgba(200,180,240,0.15)'; ctx.fill();
       return;
     }
-
-    const total = wheel.options.reduce((s, o) => s + (parseFloat(o.weight.toString()) || 1), 0);
-    let startAngle = (rotation * Math.PI) / 180;
-
-    wheel.options.forEach((opt) => {
-      const sweep = ((parseFloat(opt.weight.toString()) || 1) / total) * 2 * Math.PI;
-
-      // 扇形
-      ctx.beginPath();
-      ctx.moveTo(cx, cy);
-      ctx.arc(cx, cy, r, startAngle, startAngle + sweep);
-      ctx.closePath();
-      ctx.fillStyle = opt.color + 'dd';
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(0,0,0,0.35)';
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-
-      // 文字
-      ctx.save();
-      ctx.translate(cx, cy);
-      ctx.rotate(startAngle + sweep / 2);
-      ctx.textAlign = 'right';
-      ctx.fillStyle = 'rgba(255,255,255,0.95)';
-      ctx.font = `bold ${Math.min(13, Math.max(9, size / 28))}px 'Noto Sans SC', sans-serif`;
-      const label = opt.label.length > 8 ? opt.label.slice(0, 8) + '…' : opt.label;
-      ctx.shadowColor = 'rgba(0,0,0,0.5)';
-      ctx.shadowBlur = 4;
-      ctx.fillText(label, r - 12, 4);
-      ctx.restore();
-
-      startAngle += sweep;
+    const totalWeight = options.reduce((s, o) => s + o.weight, 0);
+    let startAngle = rotation;
+    options.forEach(opt => {
+      const slice = (opt.weight / totalWeight) * 2 * Math.PI;
+      const endAngle = startAngle + slice;
+      const midAngle = startAngle + slice / 2;
+      ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, r, startAngle, endAngle); ctx.closePath();
+      ctx.fillStyle = opt.color; ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 2; ctx.stroke();
+      if (opt.isPeripheral) {
+        const bx = cx + Math.cos(midAngle) * r * 0.82;
+        const by = cy + Math.sin(midAngle) * r * 0.82;
+        ctx.beginPath(); ctx.arc(bx, by, 7, 0, 2 * Math.PI);
+        ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.fill();
+        ctx.fillStyle = '#f59e0b'; ctx.font = 'bold 9px sans-serif';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('★', bx, by);
+      }
+      ctx.save(); ctx.translate(cx, cy); ctx.rotate(midAngle);
+      ctx.translate(r * 0.58, 0);
+      ctx.fillStyle = 'white';
+      ctx.font = `bold ${Math.max(10, Math.min(14, 200 / options.length))}px sans-serif`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.shadowColor = 'rgba(0,0,0,0.4)'; ctx.shadowBlur = 3;
+      const lbl = opt.label.length > 6 ? opt.label.slice(0, 6) + '…' : opt.label;
+      ctx.fillText(lbl, 0, 0); ctx.restore();
+      startAngle = endAngle;
     });
-
-    // 中心圆
-    ctx.beginPath();
-    ctx.arc(cx, cy, 24, 0, 2 * Math.PI);
-    const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, 24);
-    grad.addColorStop(0, '#2a1f3d');
-    grad.addColorStop(1, '#1a1525');
-    ctx.fillStyle = grad;
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(192, 132, 252, 0.4)';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    // 中心点
-    ctx.beginPath();
-    ctx.arc(cx, cy, 5, 0, 2 * Math.PI);
-    ctx.fillStyle = 'rgba(192, 132, 252, 0.8)';
-    ctx.fill();
-  };
+    ctx.beginPath(); ctx.arc(cx, cy, 22, 0, 2 * Math.PI);
+    ctx.fillStyle = 'white'; ctx.fill();
+    ctx.strokeStyle = 'rgba(200,180,240,0.5)'; ctx.lineWidth = 3; ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx, cy, 8, 0, 2 * Math.PI);
+    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, 8);
+    g.addColorStop(0, '#ec407a'); g.addColorStop(1, '#7c4dff');
+    ctx.fillStyle = g; ctx.fill();
+  }, [options, rotation]);
 
   return (
-    <canvas
-      ref={canvasRef}
-      width={size}
-      height={size}
-      className="rounded-full"
-      style={{
-        filter: spinning
-          ? 'drop-shadow(0 0 20px rgba(192,132,252,0.5)) drop-shadow(0 0 40px rgba(192,132,252,0.25))'
-          : 'drop-shadow(0 0 10px rgba(192,132,252,0.2))',
-        transition: 'filter 0.3s ease',
-      }}
-    />
-  );
-}
-
-// ============================================================
-// 选项编辑器行
-// ============================================================
-function OptionEditor({ option, onChange, onDelete }: { option: WheelOption; onChange: (o: WheelOption) => void; onDelete: () => void }) {
-  return (
-    <div
-      className="flex items-center gap-2 group px-3 py-2 rounded-xl transition-all"
-      style={{ background: 'oklch(0.155 0.022 270)', border: '1px solid oklch(0.22 0.022 270)' }}
-      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'oklch(0.30 0.025 270)'; }}
-      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'oklch(0.22 0.022 270)'; }}
-    >
-      {/* 颜色 */}
-      <input
-        type="color"
-        value={option.color}
-        onChange={e => onChange({ ...option, color: e.target.value })}
-        className="w-6 h-6 rounded-md cursor-pointer border-0 bg-transparent flex-shrink-0"
-        style={{ backgroundColor: option.color }}
-      />
-
-      {/* 标签 */}
-      <input
-        value={option.label}
-        onChange={e => onChange({ ...option, label: e.target.value })}
-        placeholder="选项名称"
-        className="flex-1 h-7 text-xs bg-transparent border-0 outline-none min-w-0"
-        style={{ color: 'oklch(0.82 0.008 270)' }}
-      />
-
-      {/* 权重 */}
-      <div className="flex items-center gap-1 flex-shrink-0">
-        <span className="text-[10px]" style={{ color: 'oklch(0.45 0.015 270)' }}>×</span>
-        <input
-          type="number"
-          value={option.weight}
-          min={0.1}
-          step={0.1}
-          onChange={e => onChange({ ...option, weight: parseFloat(e.target.value) || 1 })}
-          className="w-10 h-6 text-center text-xs rounded-lg border-0 outline-none"
-          style={{
-            background: 'oklch(0.19 0.022 270)',
-            color: 'oklch(0.72 0.015 270)',
-            border: '1px solid oklch(0.28 0.022 270)',
-          }}
-        />
+    <div className="relative flex items-center justify-center">
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1 z-10">
+        <div style={{ width: 0, height: 0, borderLeft: '10px solid transparent', borderRight: '10px solid transparent', borderTop: '22px solid #ec407a', filter: 'drop-shadow(0 2px 4px rgba(236,64,122,0.5))' }} />
       </div>
-
-      {/* 周边标记 */}
-      <button
-        onClick={() => onChange({ ...option, isPeripheral: !option.isPeripheral })}
-        className="text-xs px-1.5 py-0.5 rounded-lg transition-all flex-shrink-0"
-        style={
-          option.isPeripheral
-            ? { background: 'oklch(0.78 0.16 52 / 0.2)', color: 'oklch(0.78 0.16 52)', border: '1px solid oklch(0.78 0.16 52 / 0.4)' }
-            : { background: 'oklch(0.19 0.022 270)', color: 'oklch(0.40 0.015 270)', border: '1px solid oklch(0.26 0.022 270)' }
-        }
-        title="标记为周边奖励"
-      >
-        🎁
-      </button>
-
-      {/* 删除 */}
-      <button
-        onClick={onDelete}
-        className="opacity-0 group-hover:opacity-100 transition-all flex-shrink-0"
-        style={{ color: 'oklch(0.62 0.22 10)' }}
-      >
-        <Trash2 size={12} />
-      </button>
+      <canvas ref={canvasRef} width={380} height={380} className="rounded-full"
+        style={{ boxShadow: '0 8px 32px rgba(100,80,180,0.18), 0 2px 8px rgba(0,0,0,0.08)' }} />
     </div>
   );
 }
 
-// ============================================================
-// 快速选人（内联）
-// ============================================================
-function QuickPickInline({ open, title, onConfirm, onCancel }: { open: boolean; title: string; onConfirm: (nums: number[]) => void; onCancel: () => void }) {
-  const { state } = useApp();
-  const [selected, setSelected] = useState<number[]>([]);
-
-  if (!open) return null;
-
-  const toggle = (n: number) => setSelected(prev => prev.includes(n) ? prev.filter(x => x !== n) : [...prev, n]);
-
+function PickPlayerModal({ players, onConfirm, onClose }: { players: PlayerIdentity[]; onConfirm: (nums: number[]) => void; onClose: () => void }) {
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const toggle = (n: number) => setSelected(prev => {
+    const next = new Set(Array.from(prev));
+    if (next.has(n)) next.delete(n); else next.add(n);
+    return next;
+  });
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.6)' }} onClick={onCancel}>
-      <div
-        className="rounded-2xl p-5 max-w-sm w-full mx-4"
-        style={{
-          background: 'oklch(0.135 0.025 270)',
-          border: '1px solid oklch(0.26 0.025 270)',
-          boxShadow: '0 24px 48px rgba(0,0,0,0.5)',
-        }}
-        onClick={e => e.stopPropagation()}
-      >
+    <div className="tool-modal-backdrop" onClick={onClose}>
+      <div className="tool-modal w-[520px] p-6" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
-          <span className="font-semibold text-sm" style={{ color: 'oklch(0.88 0.008 270)' }}>{title}</span>
-          <button onClick={onCancel} style={{ color: 'oklch(0.50 0.015 270)' }}><X size={16} /></button>
+          <div>
+            <h3 className="text-lg font-black" style={{ color: 'oklch(0.22 0.02 280)' }}>选人并开始</h3>
+            <p className="text-xs mt-0.5" style={{ color: 'oklch(0.55 0.04 280)' }}>选择参与本次抽奖的玩家（已选 {selected.size} 人）</p>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-lg"
+            style={{ background: 'rgba(200,180,240,0.2)', color: 'oklch(0.45 0.06 280)' }}>×</button>
         </div>
-        <div className="grid gap-1.5 mb-4" style={{ gridTemplateColumns: 'repeat(6, 1fr)' }}>
-          {state.players.map(p => (
-            <button
-              key={p.number}
-              onClick={() => toggle(p.number)}
-              className="aspect-square rounded-xl flex items-center justify-center font-mono-display text-sm font-bold transition-all"
-              style={
-                selected.includes(p.number)
-                  ? { background: 'oklch(0.60 0.20 285 / 0.25)', border: '1.5px solid oklch(0.60 0.20 285)', color: 'oklch(0.78 0.18 285)' }
-                  : { background: 'oklch(0.19 0.022 270)', border: '1px solid oklch(0.26 0.022 270)', color: 'oklch(0.65 0.02 270)' }
-              }
-            >
-              {p.number}
-            </button>
-          ))}
+        <div className="grid gap-2 mb-5" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(52px, 1fr))' }}>
+          {players.map(p => {
+            const isSel = selected.has(p.number);
+            return (
+              <button key={p.id} onClick={() => toggle(p.number)}
+                className="aspect-square rounded-xl flex flex-col items-center justify-center gap-0.5 transition-all font-bold text-sm"
+                style={isSel
+                  ? { background: 'linear-gradient(135deg,#ec407a,#7c4dff)', color: 'white', boxShadow: '0 2px 8px rgba(124,77,255,0.35)' }
+                  : { background: 'rgba(255,255,255,0.7)', color: 'oklch(0.30 0.04 280)', border: '1.5px solid rgba(200,180,240,0.3)' }}>
+                {p.number}
+              </button>
+            );
+          })}
         </div>
-        <div className="flex gap-2">
-          <button
-            onClick={onCancel}
-            className="flex-1 py-2 rounded-xl text-sm font-semibold transition-all"
-            style={{ background: 'oklch(0.19 0.022 270)', border: '1px solid oklch(0.28 0.022 270)', color: 'oklch(0.60 0.02 270)' }}
-          >
-            取消
-          </button>
-          <button
-            onClick={() => { onConfirm(selected); setSelected([]); }}
-            className="flex-1 py-2 rounded-xl text-sm font-semibold transition-all"
-            style={{
-              background: selected.length > 0 ? 'oklch(0.60 0.20 285 / 0.2)' : 'oklch(0.19 0.022 270)',
-              border: `1px solid ${selected.length > 0 ? 'oklch(0.60 0.20 285 / 0.5)' : 'oklch(0.28 0.022 270)'}`,
-              color: selected.length > 0 ? 'oklch(0.78 0.18 285)' : 'oklch(0.45 0.015 270)',
-            }}
-          >
-            {selected.length > 0 ? `开始旋转 (${selected.length}人)` : '跳过选人'}
+        <div className="flex gap-3">
+          <button onClick={() => setSelected(new Set(players.map(p => p.number)))}
+            className="px-4 py-2.5 rounded-xl text-sm font-bold"
+            style={{ background: 'rgba(200,180,240,0.2)', color: 'oklch(0.45 0.06 280)' }}>全选</button>
+          <button onClick={() => setSelected(new Set())}
+            className="px-4 py-2.5 rounded-xl text-sm font-bold"
+            style={{ background: 'rgba(200,180,240,0.2)', color: 'oklch(0.45 0.06 280)' }}>清空</button>
+          <button onClick={() => {
+            if (selected.size === 0) { toast.error('请至少选择一位玩家'); return; }
+            onConfirm(Array.from(selected).sort((a, b) => a - b)); onClose();
+          }} className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white"
+            style={{ background: 'linear-gradient(135deg,#ec407a,#7c4dff)', boxShadow: '0 4px 14px rgba(124,77,255,0.3)' }}>
+            确认并开始（{selected.size}人）
           </button>
         </div>
       </div>
@@ -279,479 +173,369 @@ function QuickPickInline({ open, title, onConfirm, onCancel }: { open: boolean; 
   );
 }
 
-// ============================================================
-// 主页面
-// ============================================================
-export default function WheelPage() {
-  const { state, dispatch } = useApp();
-  const [selectedWheelId, setSelectedWheelId] = useState<string | null>(state.wheels[0]?.id ?? null);
-  const [spinning, setSpinning] = useState(false);
-  const [rotation, setRotation] = useState(0);
-  const [result, setResult] = useState<WheelOption | null>(null);
-  const [showPickPlayers, setShowPickPlayers] = useState(false);
-  const [editingName, setEditingName] = useState(false);
-  const [nameInput, setNameInput] = useState('');
-  const [showHistory, setShowHistory] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const selectedWheel = state.wheels.find(w => w.id === selectedWheelId);
-
-  const handleCreateWheel = () => {
-    const wheel: Wheel = {
-      id: nanoid(),
-      name: `轮盘 ${state.wheels.length + 1}`,
-      options: [
-        { id: nanoid(), label: '选项 1', color: OPTION_COLORS[0], weight: 1, isPeripheral: false },
-        { id: nanoid(), label: '选项 2', color: OPTION_COLORS[1], weight: 1, isPeripheral: false },
-        { id: nanoid(), label: '选项 3', color: OPTION_COLORS[2], weight: 1, isPeripheral: false },
-      ],
-      history: [],
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    };
-    dispatch({ type: 'ADD_WHEEL', payload: wheel });
-    setSelectedWheelId(wheel.id);
-    toast.success('已创建新轮盘');
-  };
-
-  const handleDeleteWheel = (wheelId: string) => {
-    dispatch({ type: 'REMOVE_WHEEL', payload: wheelId });
-    if (selectedWheelId === wheelId) {
-      setSelectedWheelId(state.wheels.find(w => w.id !== wheelId)?.id ?? null);
-    }
-    toast.success('已删除轮盘');
-  };
-
-  const handleUpdateOption = (idx: number, opt: WheelOption) => {
-    if (!selectedWheel) return;
-    const newOptions = [...selectedWheel.options];
-    newOptions[idx] = opt;
-    dispatch({ type: 'UPDATE_WHEEL', payload: { ...selectedWheel, options: newOptions, updatedAt: Date.now() } });
-  };
-
-  const handleAddOption = () => {
-    if (!selectedWheel) return;
-    const newOpt: WheelOption = {
-      id: nanoid(),
-      label: `选项 ${selectedWheel.options.length + 1}`,
-      color: OPTION_COLORS[selectedWheel.options.length % OPTION_COLORS.length],
-      weight: 1,
-      isPeripheral: false,
-    };
-    dispatch({ type: 'UPDATE_WHEEL', payload: { ...selectedWheel, options: [...selectedWheel.options, newOpt], updatedAt: Date.now() } });
-  };
-
-  const handleDeleteOption = (idx: number) => {
-    if (!selectedWheel) return;
-    dispatch({ type: 'UPDATE_WHEEL', payload: { ...selectedWheel, options: selectedWheel.options.filter((_, i) => i !== idx), updatedAt: Date.now() } });
-  };
-
-  const doSpin = (playerNums: number[]) => {
-    if (!selectedWheel) return;
-    setSpinning(true);
-    setResult(null);
-    const rounds = 7 + Math.floor(Math.random() * 5);
-    const extraDeg = Math.floor(Math.random() * 360);
-    const newRotation = rotation + rounds * 360 + extraDeg;
-    setRotation(newRotation);
-
-    setTimeout(() => {
-      setSpinning(false);
-      const total = selectedWheel.options.reduce((s, o) => s + (parseFloat(o.weight.toString()) || 1), 0);
-      const winDeg = (360 - (newRotation % 360)) % 360;
-      let cur = 0;
-      let winner: WheelOption | null = null;
-      for (const opt of selectedWheel.options) {
-        const sweep = ((parseFloat(opt.weight.toString()) || 1) / total) * 360;
-        if (winDeg >= cur && winDeg < cur + sweep) { winner = opt; break; }
-        cur += sweep;
-      }
-      if (!winner) winner = selectedWheel.options[0];
-      setResult(winner);
-
-      const historyEntry = {
-        id: nanoid(),
-        optionLabel: winner.label,
-        optionColor: winner.color,
-        playerNumbers: playerNums,
-        timestamp: Date.now(),
-        isPeripheral: winner.isPeripheral,
-      };
-      dispatch({ type: 'UPDATE_WHEEL', payload: { ...selectedWheel, history: [historyEntry, ...(selectedWheel.history || [])], updatedAt: Date.now() } });
-
-      if (winner.isPeripheral) {
-        playerNums.forEach((num, idx) => {
-          const maxSerial = state.peripheralRecords.reduce((max, r) => Math.max(max, r.serialNumber), 0);
-          dispatch({
-            type: 'ADD_PERIPHERAL_RECORD',
-            payload: {
-              id: nanoid(),
-              serialNumber: maxSerial + 1 + idx,
-              playerNumber: num,
-              peripheralCode: `P-${String(maxSerial + 1 + idx).padStart(4, '0')}`,
-              notes: '',
-              completed: false,
-              source: 'wheel-result',
-              sourceWheelName: selectedWheel.name,
-              sourceWheelOption: winner!.label,
-              createdAt: Date.now(),
-            }
-          });
-        });
-        toast.success(`🎁 已为 ${playerNums.length} 位玩家生成周边记录`);
-      }
-    }, 4200);
-  };
-
-  const handleRenameWheel = () => {
-    if (!selectedWheel || !nameInput.trim()) return;
-    dispatch({ type: 'UPDATE_WHEEL', payload: { ...selectedWheel, name: nameInput.trim(), updatedAt: Date.now() } });
-    setEditingName(false);
-    toast.success('已重命名');
-  };
-
-  const handleExport = () => {
-    const json = JSON.stringify({ wheels: state.wheels }, null, 2);
-    const blob = new Blob([json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = `wheels-${Date.now()}.json`; a.click();
-    URL.revokeObjectURL(url);
-    toast.success('轮盘配置已导出');
-  };
-
-  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = ev => {
-      try {
-        const data = JSON.parse(ev.target?.result as string);
-        if (data.wheels && Array.isArray(data.wheels)) {
-          data.wheels.forEach((w: Wheel) => dispatch({ type: 'ADD_WHEEL', payload: w }));
-          toast.success(`已导入 ${data.wheels.length} 个轮盘`);
-        }
-      } catch { toast.error('导入失败'); }
-    };
-    reader.readAsText(file);
-    e.target.value = '';
-  };
-
+function OptionRow({ opt, onChange, onRemove, canRemove }: { opt: WheelOption; onChange: (u: WheelOption) => void; onRemove: () => void; canRemove: boolean }) {
   return (
-    <div className="h-full flex overflow-hidden">
-
-      {/* ============================================================
-          左侧：轮盘列表
-          ============================================================ */}
-      <div
-        className="w-44 flex-shrink-0 flex flex-col overflow-hidden"
-        style={{
-          background: 'oklch(0.115 0.022 270)',
-          borderRight: '1px solid oklch(0.20 0.022 270)',
-        }}
-      >
-        <div
-          className="px-3 py-3 flex-shrink-0 flex items-center justify-between"
-          style={{ borderBottom: '1px solid oklch(0.18 0.02 270)' }}
-        >
-          <div className="flex items-center gap-2">
-            <RotateCcw size={13} style={{ color: 'oklch(0.60 0.20 285)' }} />
-            <span className="text-sm font-semibold" style={{ color: 'oklch(0.82 0.008 270)' }}>轮盘</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <button onClick={handleExport} className="p-1 rounded-lg transition-all" style={{ color: 'oklch(0.50 0.015 270)' }} title="导出">
-              <Download size={12} />
-            </button>
-            <button onClick={() => fileInputRef.current?.click()} className="p-1 rounded-lg transition-all" style={{ color: 'oklch(0.50 0.015 270)' }} title="导入">
-              <Upload size={12} />
-            </button>
-            <input ref={fileInputRef} type="file" accept=".json" className="hidden" onChange={handleImport} />
-            <button
-              onClick={handleCreateWheel}
-              className="p-1 rounded-lg transition-all"
-              style={{ color: 'oklch(0.60 0.20 285)' }}
-              title="新建轮盘"
-            >
-              <Plus size={14} />
-            </button>
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-y-auto px-2.5 py-2 space-y-1">
-          {state.wheels.length === 0 ? (
-            <div className="text-center py-8" style={{ color: 'oklch(0.40 0.015 270)' }}>
-              <RotateCcw size={20} className="mx-auto mb-2 opacity-30" />
-              <div className="text-xs">点击 + 创建轮盘</div>
-            </div>
-          ) : (
-            state.wheels.map(wheel => {
-              const isActive = selectedWheelId === wheel.id;
-              return (
-                <div
-                  key={wheel.id}
-                  className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl cursor-pointer transition-all group"
-                  style={
-                    isActive
-                      ? { background: 'oklch(0.60 0.20 285 / 0.12)', border: '1px solid oklch(0.60 0.20 285 / 0.3)' }
-                      : { background: 'oklch(0.155 0.022 270)', border: '1px solid oklch(0.22 0.022 270)' }
-                  }
-                  onClick={() => setSelectedWheelId(wheel.id)}
-                  onMouseEnter={e => { if (!isActive) { (e.currentTarget as HTMLElement).style.background = 'oklch(0.185 0.025 270)'; } }}
-                  onMouseLeave={e => { if (!isActive) { (e.currentTarget as HTMLElement).style.background = 'oklch(0.155 0.022 270)'; } }}
-                >
-                  <span
-                    className="flex-1 text-xs font-medium truncate"
-                    style={{ color: isActive ? 'oklch(0.88 0.008 270)' : 'oklch(0.65 0.02 270)' }}
-                  >
-                    {wheel.name}
-                  </span>
-                  <button
-                    onClick={e => { e.stopPropagation(); handleDeleteWheel(wheel.id); }}
-                    className="opacity-0 group-hover:opacity-100 transition-all flex-shrink-0"
-                    style={{ color: 'oklch(0.62 0.22 10)' }}
-                  >
-                    <Trash2 size={11} />
-                  </button>
-                </div>
-              );
-            })
-          )}
-        </div>
+    <div className="flex items-center gap-2 p-2.5 rounded-xl" style={{ background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(200,180,240,0.2)' }}>
+      <div className="relative flex-shrink-0 w-7 h-7 rounded-lg" style={{ background: opt.color }}>
+        <input type="color" value={opt.color} onChange={e => onChange({ ...opt, color: e.target.value })}
+          className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
       </div>
+      <input type="text" value={opt.label} onChange={e => onChange({ ...opt, label: e.target.value })}
+        className="flex-1 px-2 py-1 rounded-lg text-sm font-medium bg-transparent border-none outline-none"
+        style={{ color: 'oklch(0.22 0.02 280)' }} placeholder="选项名称" />
+      <div className="flex items-center gap-1 flex-shrink-0">
+        <button onClick={() => onChange({ ...opt, weight: Math.max(1, opt.weight - 1) })}
+          className="w-5 h-5 rounded-md text-xs font-bold flex items-center justify-center"
+          style={{ background: 'rgba(200,180,240,0.3)', color: 'oklch(0.45 0.06 280)' }}>-</button>
+        <span className="w-5 text-center text-xs font-bold" style={{ color: 'oklch(0.35 0.04 280)' }}>{opt.weight}</span>
+        <button onClick={() => onChange({ ...opt, weight: opt.weight + 1 })}
+          className="w-5 h-5 rounded-md text-xs font-bold flex items-center justify-center"
+          style={{ background: 'rgba(200,180,240,0.3)', color: 'oklch(0.45 0.06 280)' }}>+</button>
+      </div>
+      <button onClick={() => onChange({ ...opt, isPeripheral: !opt.isPeripheral })}
+        className="px-2 py-1 rounded-lg text-xs font-bold flex-shrink-0 transition-all"
+        style={opt.isPeripheral
+          ? { background: 'linear-gradient(135deg,#f59e0b,#f97316)', color: 'white', boxShadow: '0 2px 6px rgba(245,158,11,0.35)' }
+          : { background: 'rgba(200,180,240,0.15)', color: 'oklch(0.55 0.04 280)' }}>
+        ★周边
+      </button>
+      {canRemove && (
+        <button onClick={onRemove} className="w-6 h-6 rounded-md flex items-center justify-center text-sm flex-shrink-0"
+          style={{ color: '#ef4444', background: 'rgba(239,68,68,0.1)' }}>×</button>
+      )}
+    </div>
+  );
+}
 
-      {/* ============================================================
-          中间：轮盘展示区
-          ============================================================ */}
-      <div className="flex-1 flex flex-col items-center justify-center p-6 overflow-y-auto">
-        {selectedWheel ? (
-          <div className="flex flex-col items-center gap-5 w-full max-w-md">
-
-            {/* 轮盘名称 */}
-            <div className="flex items-center gap-2">
-              {editingName ? (
-                <div className="flex items-center gap-2">
-                  <input
-                    value={nameInput}
-                    onChange={e => setNameInput(e.target.value)}
-                    className="h-8 px-3 rounded-xl text-sm bg-transparent border outline-none"
-                    style={{ border: '1px solid oklch(0.60 0.20 285 / 0.5)', color: 'oklch(0.88 0.008 270)' }}
-                    onKeyDown={e => e.key === 'Enter' && handleRenameWheel()}
-                    autoFocus
-                  />
-                  <button onClick={handleRenameWheel} className="p-1.5 rounded-lg" style={{ background: 'oklch(0.60 0.20 285 / 0.2)', color: 'oklch(0.78 0.18 285)' }}>
-                    <Check size={13} />
-                  </button>
-                  <button onClick={() => setEditingName(false)} className="p-1.5 rounded-lg" style={{ color: 'oklch(0.50 0.015 270)' }}>
-                    <X size={13} />
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={() => { setNameInput(selectedWheel.name); setEditingName(true); }}
-                  className="flex items-center gap-2 text-lg font-bold transition-all"
-                  style={{ color: 'oklch(0.88 0.008 270)', fontFamily: "'Noto Serif SC', serif" }}
-                >
-                  {selectedWheel.name}
-                  <Edit3 size={13} style={{ color: 'oklch(0.45 0.015 270)', opacity: 0.6 }} />
-                </button>
-              )}
-            </div>
-
-            {/* 轮盘 + 指针 */}
-            <div className="relative">
-              {/* 指针 */}
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-3 z-10">
-                <div
-                  className="w-0 h-0"
-                  style={{
-                    borderLeft: '10px solid transparent',
-                    borderRight: '10px solid transparent',
-                    borderTop: '28px solid oklch(0.62 0.22 10)',
-                    filter: 'drop-shadow(0 2px 6px rgba(239,68,68,0.6))',
-                  }}
-                />
-              </div>
-
-              {/* 轮盘旋转容器 */}
-              <div
-                style={{
-                  transform: `rotate(${rotation}deg)`,
-                  transition: spinning ? 'transform 4.2s cubic-bezier(0.17, 0.67, 0.12, 0.99)' : 'none',
-                }}
-              >
-                <WheelCanvas wheel={selectedWheel} spinning={spinning} rotation={0} size={340} />
-              </div>
-            </div>
-
-            {/* 结果展示 */}
-            {result && (
-              <div
-                className="w-full text-center px-6 py-4 rounded-2xl"
-                style={{
-                  background: `${result.color}18`,
-                  border: `2px solid ${result.color}50`,
-                  boxShadow: `0 0 24px ${result.color}20`,
-                }}
-              >
-                <div className="text-2xl font-bold" style={{ color: result.color, fontFamily: "'Noto Serif SC', serif" }}>
-                  {result.label}
-                </div>
-                {result.isPeripheral && (
-                  <div className="text-xs mt-1.5 font-semibold" style={{ color: 'oklch(0.78 0.16 52)' }}>
-                    🎁 周边奖励已记录到清单
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* 操作按钮 */}
-            <div className="flex gap-3 w-full">
-              <button
-                onClick={() => setShowPickPlayers(true)}
-                disabled={spinning || selectedWheel.options.length === 0}
-                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-base transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                style={{
-                  background: spinning ? 'oklch(0.60 0.20 285 / 0.1)' : 'oklch(0.60 0.20 285 / 0.2)',
-                  border: '1px solid oklch(0.60 0.20 285 / 0.5)',
-                  color: 'oklch(0.78 0.18 285)',
-                  boxShadow: spinning ? 'none' : '0 0 16px oklch(0.60 0.20 285 / 0.15)',
-                }}
-                onMouseEnter={e => {
-                  if (!spinning) {
-                    (e.currentTarget as HTMLElement).style.background = 'oklch(0.60 0.20 285 / 0.3)';
-                    (e.currentTarget as HTMLElement).style.boxShadow = '0 0 24px oklch(0.60 0.20 285 / 0.25)';
-                  }
-                }}
-                onMouseLeave={e => {
-                  (e.currentTarget as HTMLElement).style.background = 'oklch(0.60 0.20 285 / 0.2)';
-                  (e.currentTarget as HTMLElement).style.boxShadow = '0 0 16px oklch(0.60 0.20 285 / 0.15)';
-                }}
-              >
-                <RotateCcw size={16} className={spinning ? 'animate-spin' : ''} />
-                {spinning ? '旋转中...' : '选人并开始'}
-              </button>
-
-              <button
-                onClick={() => setShowHistory(!showHistory)}
-                className="flex items-center gap-2 px-4 py-3 rounded-xl font-semibold text-sm transition-all"
-                style={
-                  showHistory
-                    ? { background: 'oklch(0.78 0.16 52 / 0.15)', border: '1px solid oklch(0.78 0.16 52 / 0.4)', color: 'oklch(0.78 0.16 52)' }
-                    : { background: 'oklch(0.19 0.022 270)', border: '1px solid oklch(0.26 0.022 270)', color: 'oklch(0.55 0.02 270)' }
-                }
-              >
-                <History size={14} />
-                历史
-              </button>
-            </div>
-
-            {/* 历史记录 */}
-            {showHistory && selectedWheel.history && selectedWheel.history.length > 0 && (
-              <div className="w-full space-y-1.5 max-h-48 overflow-y-auto">
-                <div
-                  className="text-xs font-bold tracking-widest uppercase mb-2"
-                  style={{ color: 'oklch(0.45 0.015 270)', letterSpacing: '0.12em' }}
-                >
-                  历史记录
-                </div>
-                {selectedWheel.history.slice(0, 20).map(h => (
-                  <div
-                    key={h.id}
-                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs"
-                    style={{ background: 'oklch(0.155 0.022 270)', border: '1px solid oklch(0.22 0.022 270)' }}
-                  >
-                    <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: h.optionColor }} />
-                    <span className="font-semibold" style={{ color: 'oklch(0.82 0.008 270)' }}>{h.optionLabel}</span>
-                    {h.playerNumbers.length > 0 && (
-                      <span style={{ color: 'oklch(0.50 0.015 270)' }}>→ #{h.playerNumbers.join(' #')}</span>
-                    )}
-                    {h.isPeripheral && <span>🎁</span>}
-                    <span className="ml-auto" style={{ color: 'oklch(0.40 0.015 270)' }}>
-                      {new Date(h.timestamp).toLocaleTimeString()}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="text-center" style={{ color: 'oklch(0.40 0.015 270)' }}>
-            <RotateCcw size={48} className="mx-auto mb-4 opacity-20" />
-            <div className="text-base">请选择或创建轮盘</div>
+function ResultModal({ option, playerNumbers, onClose }: { option: WheelOption; playerNumbers: number[]; onClose: () => void }) {
+  return (
+    <div className="tool-modal-backdrop" onClick={onClose}>
+      <div className="tool-modal p-8 text-center max-w-sm" onClick={e => e.stopPropagation()}>
+        <div className="text-5xl mb-4">{option.isPeripheral ? '🎁' : '🎯'}</div>
+        <div className="text-3xl font-black mb-3" style={{ color: option.color }}>{option.label}</div>
+        {option.isPeripheral && (
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold mb-4"
+            style={{ background: 'rgba(245,158,11,0.1)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.3)' }}>
+            ★ 已同步至周边清单
           </div>
         )}
+        {playerNumbers.length > 0 && (
+          <div className="mb-4">
+            <div className="text-xs font-semibold mb-2" style={{ color: 'oklch(0.55 0.04 280)' }}>参与玩家</div>
+            <div className="flex flex-wrap gap-2 justify-center">
+              {playerNumbers.map(n => (
+                <span key={n} className="w-9 h-9 rounded-xl flex items-center justify-center font-black text-white text-sm"
+                  style={{ background: 'linear-gradient(135deg,#ec407a,#7c4dff)' }}>{n}</span>
+              ))}
+            </div>
+          </div>
+        )}
+        <button onClick={onClose} className="w-full py-3 rounded-2xl font-bold text-white"
+          style={{ background: 'linear-gradient(135deg,#ec407a,#7c4dff)', boxShadow: '0 4px 14px rgba(124,77,255,0.3)' }}>
+          好的！
+        </button>
       </div>
+    </div>
+  );
+}
 
-      {/* ============================================================
-          右侧：选项编辑
-          ============================================================ */}
-      {selectedWheel && (
-        <div
-          className="w-72 flex-shrink-0 flex flex-col overflow-hidden"
-          style={{
-            background: 'oklch(0.115 0.022 270)',
-            borderLeft: '1px solid oklch(0.20 0.022 270)',
-          }}
-        >
-          <div
-            className="px-4 py-3 flex-shrink-0 flex items-center justify-between"
-            style={{ borderBottom: '1px solid oklch(0.18 0.02 270)' }}
-          >
-            <div className="flex items-center gap-2">
-              <Layers size={13} style={{ color: 'oklch(0.60 0.20 285)' }} />
-              <span className="text-sm font-semibold" style={{ color: 'oklch(0.82 0.008 270)' }}>
-                选项配置
-                <span className="ml-1.5 text-xs font-normal" style={{ color: 'oklch(0.45 0.015 270)' }}>
-                  ({selectedWheel.options.length})
-                </span>
-              </span>
-            </div>
-            <button
-              onClick={handleAddOption}
-              className="p-1.5 rounded-lg transition-all"
-              style={{ color: 'oklch(0.60 0.20 285)' }}
-              title="添加选项"
-            >
-              <Plus size={14} />
-            </button>
+export default function WheelPage() {
+  useEnsureDefaultWheels();
+  const { state, dispatch } = useApp();
+
+  const defaultWheels = DEFAULT_IDS.map(id => state.wheels.find(w => w.id === id)).filter(Boolean) as Wheel[];
+  const customWheels = state.wheels.filter(w => !DEFAULT_IDS.includes(w.id));
+  const allWheels = [...defaultWheels, ...customWheels];
+
+  const [activeWheelId, setActiveWheelId] = useState<string>(DEFAULT_IDS[0]);
+  const [showWheelList, setShowWheelList] = useState(true);
+  const [showConfig, setShowConfig] = useState(false);
+  const [spinning, setSpinning] = useState(false);
+  const [rotation, setRotation] = useState(0);
+  const [resultOption, setResultOption] = useState<WheelOption | null>(null);
+  const [resultPlayers, setResultPlayers] = useState<number[]>([]);
+  const [showPickModal, setShowPickModal] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState('');
+  const animRef = useRef<number | null>(null);
+  const rotRef = useRef(0);
+
+  const activeWheel = allWheels.find(w => w.id === activeWheelId) || allWheels[0];
+  const isDefaultWheel = activeWheel ? DEFAULT_IDS.includes(activeWheel.id) : false;
+
+  const pickWinner = useCallback((opts: WheelOption[]): WheelOption => {
+    const total = opts.reduce((s, o) => s + o.weight, 0);
+    let rand = Math.random() * total;
+    for (const opt of opts) { rand -= opt.weight; if (rand <= 0) return opt; }
+    return opts[opts.length - 1];
+  }, []);
+
+  const doSpin = useCallback((playerNums: number[]) => {
+    if (!activeWheel || spinning || activeWheel.options.length === 0) return;
+    setSpinning(true);
+    setResultOption(null);
+    const winner = pickWinner(activeWheel.options);
+    const totalWeight = activeWheel.options.reduce((s, o) => s + o.weight, 0);
+    let winnerStartAngle = 0;
+    for (const opt of activeWheel.options) {
+      if (opt.id === winner.id) break;
+      winnerStartAngle += (opt.weight / totalWeight) * 2 * Math.PI;
+    }
+    const winnerMidAngle = winnerStartAngle + (winner.weight / totalWeight) * Math.PI;
+    const spins = 5 + Math.floor(Math.random() * 3);
+    const targetRotation = -Math.PI / 2 - winnerMidAngle + 2 * Math.PI * spins;
+    const startRot = rotRef.current;
+    const totalDelta = targetRotation - (startRot % (2 * Math.PI)) + 2 * Math.PI * spins;
+    const duration = 4000 + Math.random() * 1000;
+    const startTime = performance.now();
+    const animate = (now: number) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      rotRef.current = startRot + totalDelta * eased;
+      setRotation(rotRef.current);
+      if (progress < 1) { animRef.current = requestAnimationFrame(animate); }
+      else {
+        setSpinning(false);
+        setResultOption(winner);
+        setResultPlayers(playerNums);
+        const entry: WheelHistoryEntry = {
+          id: nanoid(), optionLabel: winner.label, optionColor: winner.color,
+          playerNumbers: playerNums, timestamp: Date.now(), isPeripheral: winner.isPeripheral,
+        };
+        dispatch({ type: 'UPDATE_WHEEL', payload: { ...activeWheel, history: [entry, ...activeWheel.history].slice(0, 50), updatedAt: Date.now() } });
+        if (winner.isPeripheral && playerNums.length > 0) {
+          const maxSerial = state.peripheralRecords.reduce((max, r) => Math.max(max, r.serialNumber), 0);
+          playerNums.forEach((num, i) => {
+            dispatch({
+              type: 'ADD_PERIPHERAL_RECORD',
+              payload: {
+                id: nanoid(), serialNumber: maxSerial + i + 1, playerNumber: num,
+                peripheralCode: `W-${String(maxSerial + i + 1).padStart(4, '0')}`,
+                previewImage: winner.image, notes: `${activeWheel.name} · ${winner.label}`,
+                completed: false, source: 'wheel-result',
+                sourceWheelName: activeWheel.name, sourceWheelOption: winner.label, createdAt: Date.now(),
+              },
+            });
+          });
+          toast.success(`"${winner.label}" 已同步至周边清单`);
+        }
+      }
+    };
+    animRef.current = requestAnimationFrame(animate);
+  }, [activeWheel, spinning, pickWinner, dispatch, state.peripheralRecords]);
+
+  const handleUpdateOption = (optId: string, updated: WheelOption) => {
+    if (!activeWheel) return;
+    dispatch({ type: 'UPDATE_WHEEL', payload: { ...activeWheel, options: activeWheel.options.map(o => o.id === optId ? updated : o), updatedAt: Date.now() } });
+  };
+  const handleAddOption = () => {
+    if (!activeWheel) return;
+    const colors = ['#f59e0b', '#6366f1', '#10b981', '#ef4444', '#06b6d4', '#ec4899', '#f97316', '#8b5cf6'];
+    dispatch({ type: 'UPDATE_WHEEL', payload: { ...activeWheel, options: [...activeWheel.options, { id: nanoid(), label: `选项 ${activeWheel.options.length + 1}`, weight: 2, color: colors[activeWheel.options.length % colors.length], isPeripheral: false }], updatedAt: Date.now() } });
+  };
+  const handleRemoveOption = (optId: string) => {
+    if (!activeWheel || activeWheel.options.length <= 2) { toast.error('至少需要2个选项'); return; }
+    dispatch({ type: 'UPDATE_WHEEL', payload: { ...activeWheel, options: activeWheel.options.filter(o => o.id !== optId), updatedAt: Date.now() } });
+  };
+  const handleAddWheel = () => {
+    const newWheel: Wheel = {
+      id: nanoid(), name: `自定义轮盘 ${customWheels.length + 1}`,
+      options: [
+        { id: nanoid(), label: '选项A', weight: 2, color: '#6366f1', isPeripheral: false },
+        { id: nanoid(), label: '选项B', weight: 2, color: '#10b981', isPeripheral: false },
+        { id: nanoid(), label: '选项C', weight: 2, color: '#f59e0b', isPeripheral: false },
+      ],
+      history: [], isDefault: false, createdAt: Date.now(), updatedAt: Date.now(),
+    };
+    dispatch({ type: 'ADD_WHEEL', payload: newWheel });
+    setActiveWheelId(newWheel.id);
+    setShowConfig(true);
+  };
+  const handleDeleteWheel = () => {
+    if (!activeWheel || isDefaultWheel) return;
+    dispatch({ type: 'REMOVE_WHEEL', payload: activeWheel.id });
+    setActiveWheelId(DEFAULT_IDS[0]);
+  };
+  const handleSaveName = () => {
+    if (!activeWheel || isDefaultWheel) return;
+    if (nameInput.trim()) dispatch({ type: 'UPDATE_WHEEL', payload: { ...activeWheel, name: nameInput.trim(), updatedAt: Date.now() } });
+    setEditingName(false);
+  };
+
+  useEffect(() => () => { if (animRef.current) cancelAnimationFrame(animRef.current); }, []);
+
+  if (!activeWheel) return null;
+
+  return (
+    <div className="h-[calc(100vh-64px)] flex overflow-hidden">
+      {/* 左侧轮盘列表 */}
+      {showWheelList && (
+        <div className="w-52 flex-shrink-0 flex flex-col overflow-hidden"
+          style={{ background: 'rgba(255,255,255,0.55)', backdropFilter: 'blur(16px)', borderRight: '1px solid rgba(200,180,240,0.25)' }}>
+          <div className="px-4 py-3 flex-shrink-0 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(200,180,240,0.2)' }}>
+            <span className="text-xs font-bold" style={{ color: 'oklch(0.50 0.06 310)' }}>轮盘列表</span>
+            <button onClick={handleAddWheel} className="px-2 py-1 rounded-lg text-xs font-bold"
+              style={{ background: 'linear-gradient(135deg,#ec407a,#7c4dff)', color: 'white' }}>+ 新建</button>
           </div>
-
-          <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1.5">
-            {selectedWheel.options.length === 0 ? (
-              <div className="text-center py-8" style={{ color: 'oklch(0.40 0.015 270)' }}>
-                <Layers size={20} className="mx-auto mb-2 opacity-30" />
-                <div className="text-xs">点击 + 添加选项</div>
-              </div>
-            ) : (
-              selectedWheel.options.map((opt, idx) => (
-                <OptionEditor
-                  key={opt.id}
-                  option={opt}
-                  onChange={newOpt => handleUpdateOption(idx, newOpt)}
-                  onDelete={() => handleDeleteOption(idx)}
-                />
-              ))
+          <div className="flex-1 overflow-y-auto p-3 space-y-1.5">
+            <div className="text-xs font-bold px-1 mb-1" style={{ color: 'oklch(0.60 0.06 280)' }}>默认轮盘</div>
+            {defaultWheels.map(w => (
+              <button key={w.id} onClick={() => setActiveWheelId(w.id)}
+                className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-left transition-all"
+                style={w.id === activeWheelId
+                  ? { background: 'linear-gradient(135deg,rgba(236,64,122,0.1),rgba(124,77,255,0.1))', border: '1.5px solid rgba(124,77,255,0.3)' }
+                  : { background: 'rgba(255,255,255,0.6)', border: '1.5px solid rgba(200,180,240,0.2)' }}>
+                <span className="text-base">{w.id === 'wheel-default-lottery' ? '🎁' : w.id === 'wheel-default-penalty' ? '💧' : '⚡'}</span>
+                <span className="text-sm font-semibold" style={{ color: w.id === activeWheelId ? 'oklch(0.22 0.02 280)' : 'oklch(0.45 0.04 280)' }}>{w.name}</span>
+              </button>
+            ))}
+            {customWheels.length > 0 && (
+              <>
+                <div className="text-xs font-bold px-1 mt-3 mb-1" style={{ color: 'oklch(0.60 0.06 280)' }}>自定义</div>
+                {customWheels.map(w => (
+                  <button key={w.id} onClick={() => setActiveWheelId(w.id)}
+                    className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-left transition-all"
+                    style={w.id === activeWheelId
+                      ? { background: 'linear-gradient(135deg,rgba(236,64,122,0.1),rgba(124,77,255,0.1))', border: '1.5px solid rgba(124,77,255,0.3)' }
+                      : { background: 'rgba(255,255,255,0.6)', border: '1.5px solid rgba(200,180,240,0.2)' }}>
+                    <span className="text-base">🎡</span>
+                    <span className="text-sm font-semibold truncate" style={{ color: w.id === activeWheelId ? 'oklch(0.22 0.02 280)' : 'oklch(0.45 0.04 280)' }}>{w.name}</span>
+                  </button>
+                ))}
+              </>
             )}
-          </div>
-
-          <div
-            className="px-4 py-2.5 flex-shrink-0"
-            style={{ borderTop: '1px solid oklch(0.18 0.02 270)' }}
-          >
-            <div className="flex items-center gap-1.5 text-[10px]" style={{ color: 'oklch(0.40 0.015 270)' }}>
-              <Info size={10} />
-              🎁 标记的选项会自动记录到周边清单
-            </div>
           </div>
         </div>
       )}
 
-      {/* 快速选人弹层 */}
-      <QuickPickInline
-        open={showPickPlayers}
-        title="请选择参与者"
-        onConfirm={nums => { setShowPickPlayers(false); doSpin(nums); }}
-        onCancel={() => setShowPickPlayers(false)}
-      />
+      {/* 主区域 */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* 顶部工具栏 */}
+        <div className="flex-shrink-0 px-6 py-3 flex items-center gap-3"
+          style={{ borderBottom: '1px solid rgba(200,180,240,0.2)', background: 'rgba(255,255,255,0.4)', backdropFilter: 'blur(12px)' }}>
+          <button onClick={() => setShowWheelList(!showWheelList)} className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all"
+            style={showWheelList ? { background: 'linear-gradient(135deg,#7c4dff,#42a5f5)', color: 'white' } : { background: 'rgba(200,180,240,0.2)', color: 'oklch(0.45 0.06 280)' }}>
+            {showWheelList ? '收起列表' : '展开列表'}
+          </button>
+          <div className="flex items-center gap-2 flex-1">
+            {editingName && !isDefaultWheel ? (
+              <div className="flex items-center gap-2">
+                <input type="text" value={nameInput} onChange={e => setNameInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') handleSaveName(); if (e.key === 'Escape') setEditingName(false); }}
+                  className="input-glass text-sm font-bold px-3 py-1.5 w-40" autoFocus />
+                <button onClick={handleSaveName} className="px-2 py-1.5 rounded-lg text-xs font-bold text-white"
+                  style={{ background: 'linear-gradient(135deg,#66bb6a,#26c6da)' }}>保存</button>
+                <button onClick={() => setEditingName(false)} className="px-2 py-1.5 rounded-lg text-xs font-bold"
+                  style={{ background: 'rgba(200,180,240,0.2)', color: 'oklch(0.45 0.06 280)' }}>取消</button>
+              </div>
+            ) : (
+              <button onClick={() => { if (!isDefaultWheel) { setNameInput(activeWheel.name); setEditingName(true); } }}
+                className="text-base font-black flex items-center gap-1.5"
+                style={{ color: 'oklch(0.22 0.02 280)', cursor: isDefaultWheel ? 'default' : 'pointer' }}>
+                {activeWheel.name}
+                {!isDefaultWheel && <span className="text-xs font-normal" style={{ color: 'oklch(0.60 0.04 280)' }}>✏️</span>}
+                {isDefaultWheel && <span className="text-xs font-normal px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(200,180,240,0.2)', color: 'oklch(0.55 0.04 280)' }}>默认</span>}
+              </button>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setShowConfig(!showConfig)} className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all"
+              style={showConfig ? { background: 'linear-gradient(135deg,#ec407a,#f48fb1)', color: 'white' } : { background: 'rgba(200,180,240,0.2)', color: 'oklch(0.45 0.06 280)' }}>
+              {showConfig ? '收起配置' : '展开配置'}
+            </button>
+            {!isDefaultWheel && (
+              <button onClick={handleDeleteWheel} className="px-3 py-1.5 rounded-xl text-xs font-bold"
+                style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}>删除</button>
+            )}
+          </div>
+        </div>
+
+        {/* 轮盘 + 配置 */}
+        <div className="flex-1 flex overflow-hidden">
+          {/* 轮盘区 */}
+          <div className="flex-1 flex flex-col items-center justify-center p-6 gap-6">
+            {activeWheel.options.length > 0 ? (
+              <WheelCanvas options={activeWheel.options} rotation={rotation} />
+            ) : (
+              <div className="w-96 h-96 rounded-full flex items-center justify-center"
+                style={{ background: 'rgba(200,180,240,0.1)', border: '2px dashed rgba(200,180,240,0.4)' }}>
+                <div className="text-center" style={{ color: 'oklch(0.55 0.04 280)' }}>
+                  <div className="text-3xl mb-2">🎡</div>
+                  <div className="text-sm font-semibold">请添加选项</div>
+                </div>
+              </div>
+            )}
+            <div className="flex gap-4">
+              <button onClick={() => doSpin([])} disabled={spinning || activeWheel.options.length === 0}
+                className="px-8 py-3.5 rounded-2xl font-black text-white text-base transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ background: 'linear-gradient(135deg,#ec407a,#7c4dff)', boxShadow: spinning ? 'none' : '0 6px 20px rgba(124,77,255,0.4)' }}>
+                {spinning ? '旋转中…' : '开始'}
+              </button>
+              <button onClick={() => setShowPickModal(true)} disabled={spinning || activeWheel.options.length === 0}
+                className="px-8 py-3.5 rounded-2xl font-bold text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ background: 'rgba(255,255,255,0.8)', color: 'oklch(0.30 0.04 280)', border: '1.5px solid rgba(200,180,240,0.4)', boxShadow: '0 4px 12px rgba(100,80,180,0.1)' }}>
+                选人并开始
+              </button>
+            </div>
+            {activeWheel.history.length > 0 && (
+              <div className="w-full max-w-md">
+                <div className="text-xs font-bold mb-2 px-1" style={{ color: 'oklch(0.55 0.04 280)' }}>最近记录</div>
+                <div className="space-y-1.5 max-h-32 overflow-y-auto">
+                  {activeWheel.history.slice(0, 5).map(h => (
+                    <div key={h.id} className="flex items-center gap-2.5 px-3 py-2 rounded-xl"
+                      style={{ background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(200,180,240,0.2)' }}>
+                      <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: h.optionColor }} />
+                      <span className="text-sm font-semibold flex-1" style={{ color: 'oklch(0.30 0.04 280)' }}>{h.optionLabel}</span>
+                      {h.playerNumbers.length > 0 && <span className="text-xs" style={{ color: 'oklch(0.55 0.04 280)' }}>{h.playerNumbers.slice(0, 3).join(', ')}{h.playerNumbers.length > 3 ? '…' : ''}</span>}
+                      {h.isPeripheral && <span className="text-xs" style={{ color: '#f59e0b' }}>★</span>}
+                      <span className="text-xs flex-shrink-0" style={{ color: 'oklch(0.65 0.02 280)' }}>
+                        {new Date(h.timestamp).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 右侧配置面板 */}
+          {showConfig && (
+            <div className="w-72 flex-shrink-0 flex flex-col overflow-hidden"
+              style={{ background: 'rgba(255,255,255,0.55)', backdropFilter: 'blur(16px)', borderLeft: '1px solid rgba(200,180,240,0.25)' }}>
+              <div className="px-4 py-3 flex-shrink-0 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(200,180,240,0.2)' }}>
+                <span className="text-xs font-bold" style={{ color: 'oklch(0.50 0.06 310)' }}>选项配置 · {activeWheel.options.length}项</span>
+                <button onClick={handleAddOption} className="px-2 py-1 rounded-lg text-xs font-bold"
+                  style={{ background: 'linear-gradient(135deg,#66bb6a,#26c6da)', color: 'white' }}>+ 添加</button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-3 space-y-2">
+                {activeWheel.options.map(opt => (
+                  <OptionRow key={opt.id} opt={opt}
+                    onChange={updated => handleUpdateOption(opt.id, updated)}
+                    onRemove={() => handleRemoveOption(opt.id)}
+                    canRemove={activeWheel.options.length > 2} />
+                ))}
+              </div>
+              <div className="px-4 py-3 flex-shrink-0" style={{ borderTop: '1px solid rgba(200,180,240,0.2)' }}>
+                <div className="text-xs" style={{ color: 'oklch(0.60 0.04 280)' }}>
+                  <span className="font-bold" style={{ color: '#f59e0b' }}>★周边</span> 标记的选项抽中后自动同步至周边清单
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 弹窗 */}
+      {showPickModal && (
+        <PickPlayerModal players={state.players}
+          onConfirm={nums => { setShowPickModal(false); doSpin(nums); }}
+          onClose={() => setShowPickModal(false)} />
+      )}
+      {resultOption && (
+        <ResultModal option={resultOption} playerNumbers={resultPlayers}
+          onClose={() => { setResultOption(null); setResultPlayers([]); }} />
+      )}
     </div>
   );
 }

@@ -1,598 +1,274 @@
-// ============================================================
-// 周边清单页面
-// Design: 奇妙奇遇 v2 — 清单感 · 品牌感 · 夜晚氛围
-// ============================================================
+// 奇妙奇遇控制台 - 周边清单页面
+// 内联直接编辑（类 Word 表格），无需进入额外编辑界面
+// 支持：手动添加行、直接点击编辑、标记完成、筛选统计
 
 import React, { useState, useRef, useMemo } from 'react';
 import { useApp } from '@/contexts/AppContext';
-import { PeripheralRecord } from '@/types';
 import { nanoid } from 'nanoid';
 import { toast } from 'sonner';
-import {
-  Plus, Trash2, Check, X, Package, Download,
-  Search, SortAsc, SortDesc, Edit3, Save, Image, AlertCircle
-} from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import type { PeripheralRecord } from '@/types';
 
-type SortField = 'serialNumber' | 'playerNumber' | 'createdAt';
-type SortDir = 'asc' | 'desc';
-type FilterStatus = 'all' | 'pending' | 'completed';
-type FilterSource = 'all' | 'game-settlement' | 'wheel-result' | 'manual';
+type FilterType = 'all' | 'pending' | 'completed';
 
-const SOURCE_LABELS: Record<string, string> = {
-  'game-settlement': '游戏结算',
-  'wheel-result': '轮盘抽取',
-  'manual': '手动添加',
+const SOURCE_LABELS: Record<string, { label: string; color: string }> = {
+  'game-settlement': { label: '游戏结算', color: '#6366f1' },
+  'wheel-result':    { label: '轮盘抽奖', color: '#ec4899' },
+  'manual':          { label: '手动添加', color: '#10b981' },
 };
 
-const SOURCE_COLORS: Record<string, string> = {
-  'game-settlement': 'oklch(0.60 0.20 285)',
-  'wheel-result': 'oklch(0.78 0.16 52)',
-  'manual': 'oklch(0.65 0.18 155)',
-};
-
-// ============================================================
-// 编辑弹窗
-// ============================================================
-function EditDialog({ record, onSave, onClose }: { record: PeripheralRecord | null; onSave: (r: PeripheralRecord) => void; onClose: () => void }) {
-  const [editing, setEditing] = useState<PeripheralRecord | null>(record ? { ...record } : null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  if (!editing) return null;
-
-  const handleAddImage = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = ev => setEditing(prev => prev ? { ...prev, previewImage: ev.target?.result as string } : null);
-    reader.readAsDataURL(file);
-    e.target.value = '';
-  };
-
+function InlineCell({
+  value, onChange, placeholder, className, style, type = 'text',
+}: {
+  value: string; onChange: (v: string) => void; placeholder?: string;
+  className?: string; style?: React.CSSProperties; type?: string;
+}) {
+  const [editing, setEditing] = useState(false);
+  if (editing) {
+    return (
+      <input
+        type={type} value={value} onChange={e => onChange(e.target.value)}
+        onBlur={() => setEditing(false)}
+        onKeyDown={e => { if (e.key === 'Enter' || e.key === 'Escape') setEditing(false); }}
+        autoFocus className={`w-full px-2 py-1 rounded-lg text-sm outline-none ${className ?? ''}`}
+        style={{ background: 'rgba(255,255,255,0.9)', border: '1.5px solid rgba(124,77,255,0.4)', ...style }}
+        placeholder={placeholder}
+      />
+    );
+  }
   return (
-    <Dialog open={!!record} onOpenChange={() => onClose()}>
-      <DialogContent
-        className="max-w-md"
-        style={{
-          background: 'oklch(0.135 0.025 270)',
-          border: '1px solid oklch(0.26 0.025 270)',
-          color: 'oklch(0.88 0.008 270)',
-        }}
-      >
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2" style={{ color: 'oklch(0.88 0.008 270)' }}>
-            <Edit3 size={15} style={{ color: 'oklch(0.60 0.20 285)' }} />
-            {editing.serialNumber ? `编辑周边记录 #${editing.serialNumber}` : '新增周边记录'}
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-4 py-1">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold tracking-widest uppercase" style={{ color: 'oklch(0.45 0.015 270)', letterSpacing: '0.1em' }}>身份号</label>
-              <input
-                type="number"
-                value={editing.playerNumber}
-                onChange={e => setEditing({ ...editing, playerNumber: parseInt(e.target.value) || 0 })}
-                className="w-full h-9 px-3 rounded-xl text-sm outline-none"
-                style={{ background: 'oklch(0.19 0.022 270)', border: '1px solid oklch(0.28 0.022 270)', color: 'oklch(0.82 0.008 270)' }}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold tracking-widest uppercase" style={{ color: 'oklch(0.45 0.015 270)', letterSpacing: '0.1em' }}>周边编号</label>
-              <input
-                value={editing.peripheralCode}
-                onChange={e => setEditing({ ...editing, peripheralCode: e.target.value })}
-                className="w-full h-9 px-3 rounded-xl text-sm outline-none"
-                style={{ background: 'oklch(0.19 0.022 270)', border: '1px solid oklch(0.28 0.022 270)', color: 'oklch(0.82 0.008 270)' }}
-              />
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold tracking-widest uppercase" style={{ color: 'oklch(0.45 0.015 270)', letterSpacing: '0.1em' }}>备注</label>
-            <input
-              value={editing.notes}
-              onChange={e => setEditing({ ...editing, notes: e.target.value })}
-              placeholder="备注信息..."
-              className="w-full h-9 px-3 rounded-xl text-sm outline-none"
-              style={{ background: 'oklch(0.19 0.022 270)', border: '1px solid oklch(0.28 0.022 270)', color: 'oklch(0.82 0.008 270)' }}
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-bold tracking-widest uppercase" style={{ color: 'oklch(0.45 0.015 270)', letterSpacing: '0.1em' }}>周边预览图</label>
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="text-xs flex items-center gap-1"
-                style={{ color: 'oklch(0.60 0.20 285)' }}
-              >
-                <Plus size={11} />添加
-              </button>
-              <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAddImage} />
-            </div>
-            {editing.previewImage ? (
-              <div className="relative group w-24 h-24">
-                <img src={editing.previewImage} alt="预览" className="w-full h-full object-cover rounded-xl" style={{ border: '1px solid oklch(0.28 0.022 270)' }} />
-                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center">
-                  <button onClick={() => setEditing({ ...editing, previewImage: undefined })} style={{ color: 'white' }}><Trash2 size={14} /></button>
-                </div>
-              </div>
-            ) : (
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                className="rounded-xl p-4 text-center text-xs cursor-pointer transition-all"
-                style={{ border: '1px dashed oklch(0.30 0.022 270)', color: 'oklch(0.45 0.015 270)' }}
-                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'oklch(0.60 0.20 285 / 0.5)'; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'oklch(0.30 0.022 270)'; }}
-              >
-                <Image size={16} className="mx-auto mb-1 opacity-50" />点击添加图片
-              </div>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span className="text-sm" style={{ color: 'oklch(0.55 0.02 270)' }}>状态</span>
-            <button
-              onClick={() => setEditing({ ...editing, completed: !editing.completed })}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold transition-all"
-              style={
-                editing.completed
-                  ? { background: 'oklch(0.65 0.18 155 / 0.15)', border: '1px solid oklch(0.65 0.18 155 / 0.4)', color: 'oklch(0.65 0.18 155)' }
-                  : { background: 'oklch(0.19 0.022 270)', border: '1px solid oklch(0.28 0.022 270)', color: 'oklch(0.55 0.02 270)' }
-              }
-            >
-              {editing.completed ? <><Check size={13} />已完成</> : <><X size={13} />待处理</>}
-            </button>
-          </div>
-        </div>
-
-        <DialogFooter className="gap-2">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 rounded-xl text-sm font-semibold transition-all"
-            style={{ background: 'oklch(0.19 0.022 270)', border: '1px solid oklch(0.28 0.022 270)', color: 'oklch(0.60 0.02 270)' }}
-          >
-            取消
-          </button>
-          <button
-            onClick={() => onSave(editing)}
-            className="px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-1.5 transition-all"
-            style={{ background: 'oklch(0.60 0.20 285 / 0.2)', border: '1px solid oklch(0.60 0.20 285 / 0.5)', color: 'oklch(0.78 0.18 285)' }}
-          >
-            <Save size={13} />保存
-          </button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <div onClick={() => setEditing(true)}
+      className={`px-2 py-1 rounded-lg text-sm cursor-text transition-all min-h-[28px] flex items-center ${className ?? ''}`}
+      style={{ ...style }}
+      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.6)'; }}
+      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+      title="点击编辑">
+      {value || <span style={{ color: 'oklch(0.70 0.02 280)' }}>{placeholder}</span>}
+    </div>
   );
 }
 
-// ============================================================
-// 主页面
-// ============================================================
 export default function PeripheralPage() {
   const { state, dispatch } = useApp();
+  const [filter, setFilter] = useState<FilterType>('all');
   const [search, setSearch] = useState('');
-  const [sortField, setSortField] = useState<SortField>('serialNumber');
-  const [sortDir, setSortDir] = useState<SortDir>('desc');
-  const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
-  const [filterSource, setFilterSource] = useState<FilterSource>('all');
-  const [editingRecord, setEditingRecord] = useState<PeripheralRecord | null>(null);
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
-  const filteredRecords = useMemo(() => {
-    let records = [...state.peripheralRecords];
+  const records = state.peripheralRecords ?? [];
+
+  const filtered = useMemo(() => records.filter(r => {
+    if (filter === 'pending' && r.completed) return false;
+    if (filter === 'completed' && !r.completed) return false;
     if (search) {
       const q = search.toLowerCase();
-      records = records.filter(r =>
-        r.peripheralCode.toLowerCase().includes(q) ||
-        r.playerNumber.toString().includes(q) ||
-        r.notes.toLowerCase().includes(q) ||
-        (r.sourceGameName || '').toLowerCase().includes(q) ||
-        (r.sourceWheelName || '').toLowerCase().includes(q)
+      return (
+        String(r.serialNumber).includes(q) ||
+        String(r.playerNumber).includes(q) ||
+        (r.peripheralCode ?? '').toLowerCase().includes(q) ||
+        (r.notes ?? '').toLowerCase().includes(q)
       );
     }
-    if (filterStatus !== 'all') records = records.filter(r => filterStatus === 'completed' ? r.completed : !r.completed);
-    if (filterSource !== 'all') records = records.filter(r => r.source === filterSource);
-    records.sort((a, b) => {
-      const aVal = a[sortField], bVal = b[sortField];
-      const cmp = aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
-      return sortDir === 'asc' ? cmp : -cmp;
-    });
-    return records;
-  }, [state.peripheralRecords, search, sortField, sortDir, filterStatus, filterSource]);
+    return true;
+  }), [records, filter, search]);
 
-  const stats = useMemo(() => ({
-    total: state.peripheralRecords.length,
-    pending: state.peripheralRecords.filter(r => !r.completed).length,
-    completed: state.peripheralRecords.filter(r => r.completed).length,
-  }), [state.peripheralRecords]);
+  const totalCount = records.length;
+  const pendingCount = records.filter(r => !r.completed).length;
+  const completedCount = records.filter(r => r.completed).length;
 
-  const handleToggleSort = (field: SortField) => {
-    if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
-    else { setSortField(field); setSortDir('desc'); }
+  const handleAdd = () => {
+    const maxSerial = records.reduce((max, r) => Math.max(max, r.serialNumber), 0);
+    const newRecord: PeripheralRecord = {
+      id: nanoid(), serialNumber: maxSerial + 1, playerNumber: 0,
+      peripheralCode: `M-${String(maxSerial + 1).padStart(4, '0')}`,
+      notes: '', completed: false, source: 'manual', createdAt: Date.now(),
+    };
+    dispatch({ type: 'ADD_PERIPHERAL_RECORD', payload: newRecord });
+    setTimeout(() => {
+      document.getElementById('peripheral-table-bottom')?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+  };
+
+  const handleUpdate = (id: string, updates: Partial<PeripheralRecord>) => {
+    dispatch({ type: 'UPDATE_PERIPHERAL', payload: { id, updates } });
   };
 
   const handleToggleComplete = (id: string) => {
-    const record = state.peripheralRecords.find(r => r.id === id);
+    const record = records.find(r => r.id === id);
     if (!record) return;
     dispatch({ type: 'UPDATE_PERIPHERAL', payload: { id, updates: { completed: !record.completed } } });
-  };
-
-  const handleSaveEdit = (record: PeripheralRecord) => {
-    const isNew = !state.peripheralRecords.find(r => r.id === record.id);
-    if (isNew) {
-      dispatch({ type: 'ADD_PERIPHERAL_RECORD', payload: record });
-      toast.success('已添加周边记录');
-    } else {
-      dispatch({ type: 'UPDATE_PERIPHERAL', payload: { id: record.id, updates: record } });
-      toast.success('已保存');
-    }
-    setEditingRecord(null);
-  };
-
-  const handleAddManual = () => {
-    const maxSerial = state.peripheralRecords.reduce((max, r) => Math.max(max, r.serialNumber), 0);
-    setEditingRecord({
-      id: nanoid(),
-      serialNumber: maxSerial + 1,
-      playerNumber: 1,
-      peripheralCode: `P-${String(maxSerial + 1).padStart(4, '0')}`,
-      notes: '',
-      completed: false,
-      source: 'manual',
-      createdAt: Date.now(),
-    });
+    toast.success(record.completed ? '已标记为待完成' : '已标记为已完成');
   };
 
   const handleDelete = (id: string) => {
     dispatch({ type: 'REMOVE_PERIPHERAL', payload: id });
-    setDeleteConfirm(null);
-    toast.success('已删除');
-  };
-
-  const handleExport = () => {
-    const csv = [
-      '序号,身份号,周边编号,来源,状态,备注,时间',
-      ...filteredRecords.map(r => [
-        r.serialNumber, r.playerNumber, r.peripheralCode,
-        SOURCE_LABELS[r.source], r.completed ? '已完成' : '待处理',
-        r.notes, new Date(r.createdAt).toLocaleString()
-      ].join(','))
-    ].join('\n');
-    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = `peripheral-${Date.now()}.csv`; a.click();
-    URL.revokeObjectURL(url);
-    toast.success('已导出 CSV');
   };
 
   const handleClearCompleted = () => {
-    const completed = state.peripheralRecords.filter(r => r.completed);
-    completed.forEach(r => dispatch({ type: 'REMOVE_PERIPHERAL', payload: r.id }));
-    toast.success(`已清除 ${completed.length} 条已完成记录`);
+    const completedIds = records.filter(r => r.completed).map(r => r.id);
+    completedIds.forEach(id => dispatch({ type: 'REMOVE_PERIPHERAL', payload: id }));
+    toast.success(`已清除 ${completedIds.length} 条已完成记录`);
   };
 
-  // 筛选按钮样式
-  const filterBtnStyle = (active: boolean) => active
-    ? { background: 'oklch(0.60 0.20 285 / 0.15)', border: '1px solid oklch(0.60 0.20 285 / 0.4)', color: 'oklch(0.78 0.18 285)' }
-    : { background: 'oklch(0.155 0.022 270)', border: '1px solid oklch(0.22 0.022 270)', color: 'oklch(0.50 0.015 270)' };
-
   return (
-    <div className="h-full flex flex-col overflow-hidden">
-
-      {/* ============================================================
-          顶部统计 + 操作栏
-          ============================================================ */}
-      <div
-        className="flex items-center gap-4 px-5 py-3 flex-shrink-0"
-        style={{ borderBottom: '1px solid oklch(0.20 0.022 270)' }}
-      >
-        {/* 统计卡片 */}
-        <div className="flex items-center gap-2.5">
-          <div
-            className="flex items-center gap-2 px-3 py-1.5 rounded-xl"
-            style={{ background: 'oklch(0.155 0.022 270)', border: '1px solid oklch(0.22 0.022 270)' }}
-          >
-            <Package size={13} style={{ color: 'oklch(0.55 0.02 270)' }} />
-            <span className="text-sm font-bold" style={{ color: 'oklch(0.88 0.008 270)' }}>{stats.total}</span>
-            <span className="text-xs" style={{ color: 'oklch(0.45 0.015 270)' }}>总计</span>
+    <div className="h-[calc(100vh-64px)] flex flex-col overflow-hidden">
+      {/* 顶部统计 + 操作栏 */}
+      <div className="flex-shrink-0 px-6 py-4"
+        style={{ background: 'rgba(255,255,255,0.5)', backdropFilter: 'blur(16px)', borderBottom: '1px solid rgba(200,180,240,0.2)' }}>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            {([
+              { label: '全部', count: totalCount, key: 'all' as FilterType, color: '#7c4dff' },
+              { label: '待完成', count: pendingCount, key: 'pending' as FilterType, color: '#f59e0b' },
+              { label: '已完成', count: completedCount, key: 'completed' as FilterType, color: '#10b981' },
+            ] as const).map(item => (
+              <button key={item.key} onClick={() => setFilter(item.key)}
+                className="flex items-center gap-2 px-4 py-2 rounded-2xl transition-all font-bold text-sm"
+                style={filter === item.key
+                  ? { background: `${item.color}18`, border: `1.5px solid ${item.color}55`, color: item.color }
+                  : { background: 'rgba(255,255,255,0.6)', border: '1.5px solid rgba(200,180,240,0.2)', color: 'oklch(0.55 0.04 280)' }}>
+                <span className="text-lg font-black" style={{ color: item.color }}>{item.count}</span>
+                <span>{item.label}</span>
+              </button>
+            ))}
           </div>
-          <div
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl"
-            style={{ background: 'oklch(0.78 0.16 52 / 0.08)', border: '1px solid oklch(0.78 0.16 52 / 0.22)' }}
-          >
-            <span className="text-sm font-bold" style={{ color: 'oklch(0.78 0.16 52)' }}>{stats.pending}</span>
-            <span className="text-xs" style={{ color: 'oklch(0.65 0.12 52)' }}>待处理</span>
-          </div>
-          <div
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl"
-            style={{ background: 'oklch(0.65 0.18 155 / 0.08)', border: '1px solid oklch(0.65 0.18 155 / 0.22)' }}
-          >
-            <span className="text-sm font-bold" style={{ color: 'oklch(0.65 0.18 155)' }}>{stats.completed}</span>
-            <span className="text-xs" style={{ color: 'oklch(0.55 0.15 155)' }}>已完成</span>
-          </div>
-        </div>
-
-        {/* 操作按钮 */}
-        <div className="ml-auto flex items-center gap-2">
-          <button
-            onClick={handleClearCompleted}
-            disabled={stats.completed === 0}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-            style={{ background: 'oklch(0.155 0.022 270)', border: '1px solid oklch(0.22 0.022 270)', color: 'oklch(0.55 0.02 270)' }}
-          >
-            清除已完成
-          </button>
-          <button
-            onClick={handleExport}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
-            style={{ background: 'oklch(0.155 0.022 270)', border: '1px solid oklch(0.22 0.022 270)', color: 'oklch(0.55 0.02 270)' }}
-          >
-            <Download size={12} />导出 CSV
-          </button>
-          <button
-            onClick={handleAddManual}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all"
-            style={{
-              background: 'oklch(0.65 0.18 155 / 0.15)',
-              border: '1px solid oklch(0.65 0.18 155 / 0.4)',
-              color: 'oklch(0.65 0.18 155)',
-            }}
-          >
-            <Plus size={12} />手动添加
-          </button>
-        </div>
-      </div>
-
-      {/* ============================================================
-          搜索 + 筛选栏
-          ============================================================ */}
-      <div
-        className="flex items-center gap-2.5 px-5 py-2.5 flex-shrink-0 flex-wrap"
-        style={{ borderBottom: '1px solid oklch(0.20 0.022 270)' }}
-      >
-        {/* 搜索 */}
-        <div className="relative">
-          <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2" style={{ color: 'oklch(0.45 0.015 270)' }} />
-          <input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="搜索身份号、编号、备注..."
-            className="pl-7 pr-3 h-7 text-xs rounded-xl outline-none w-52"
-            style={{ background: 'oklch(0.155 0.022 270)', border: '1px solid oklch(0.22 0.022 270)', color: 'oklch(0.82 0.008 270)' }}
-          />
-        </div>
-
-        {/* 状态筛选 */}
-        <div className="flex gap-1">
-          {(['all', 'pending', 'completed'] as FilterStatus[]).map(s => (
-            <button
-              key={s}
-              onClick={() => setFilterStatus(s)}
-              className="text-xs px-2.5 py-1 rounded-lg transition-all font-semibold"
-              style={filterBtnStyle(filterStatus === s)}
-            >
-              {s === 'all' ? '全部' : s === 'pending' ? '待处理' : '已完成'}
+          <div className="flex items-center gap-3">
+            <input type="text" value={search} onChange={e => setSearch(e.target.value)}
+              placeholder="搜索编号、玩家、备注…"
+              className="input-glass px-3 py-2 text-sm w-52" />
+            {completedCount > 0 && (
+              <button onClick={handleClearCompleted}
+                className="px-4 py-2 rounded-xl text-sm font-bold transition-all"
+                style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.2)' }}>
+                清除已完成
+              </button>
+            )}
+            <button onClick={handleAdd}
+              className="px-4 py-2 rounded-xl text-sm font-bold text-white transition-all"
+              style={{ background: 'linear-gradient(135deg,#ec407a,#7c4dff)', boxShadow: '0 4px 12px rgba(124,77,255,0.3)' }}>
+              + 添加记录
             </button>
-          ))}
-        </div>
-
-        {/* 来源筛选 */}
-        <div className="flex gap-1">
-          {(['all', 'game-settlement', 'wheel-result', 'manual'] as FilterSource[]).map(s => (
-            <button
-              key={s}
-              onClick={() => setFilterSource(s)}
-              className="text-xs px-2.5 py-1 rounded-lg transition-all font-semibold"
-              style={filterBtnStyle(filterSource === s)}
-            >
-              {s === 'all' ? '全部来源' : SOURCE_LABELS[s]}
-            </button>
-          ))}
+          </div>
         </div>
       </div>
 
-      {/* ============================================================
-          表格头
-          ============================================================ */}
-      <div
-        className="flex items-center gap-2 px-5 py-2 flex-shrink-0 text-xs font-bold tracking-widest uppercase"
-        style={{
-          borderBottom: '1px solid oklch(0.20 0.022 270)',
-          background: 'oklch(0.115 0.022 270)',
-          color: 'oklch(0.40 0.015 270)',
-          letterSpacing: '0.1em',
-        }}
-      >
-        <div className="w-8 flex-shrink-0 text-center">状态</div>
-        <button className="w-12 flex-shrink-0 flex items-center gap-1 hover:text-foreground transition-colors" onClick={() => handleToggleSort('serialNumber')}>
-          序号{sortField === 'serialNumber' && (sortDir === 'asc' ? <SortAsc size={10} /> : <SortDesc size={10} />)}
-        </button>
-        <button className="w-12 flex-shrink-0 flex items-center gap-1 hover:text-foreground transition-colors" onClick={() => handleToggleSort('playerNumber')}>
-          身份{sortField === 'playerNumber' && (sortDir === 'asc' ? <SortAsc size={10} /> : <SortDesc size={10} />)}
-        </button>
-        <div className="w-28 flex-shrink-0">周边编号</div>
-        <div className="flex-1">来源</div>
-        <div className="w-32 flex-shrink-0">备注</div>
-        <div className="w-8 flex-shrink-0">图</div>
-        <button className="w-24 flex-shrink-0 flex items-center gap-1 hover:text-foreground transition-colors" onClick={() => handleToggleSort('createdAt')}>
-          时间{sortField === 'createdAt' && (sortDir === 'asc' ? <SortAsc size={10} /> : <SortDesc size={10} />)}
-        </button>
-        <div className="w-16 flex-shrink-0 text-right">操作</div>
-      </div>
-
-      {/* ============================================================
-          记录列表
-          ============================================================ */}
-      <div className="flex-1 overflow-y-auto">
-        {filteredRecords.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full gap-3">
-            <div
-              className="w-16 h-16 rounded-2xl flex items-center justify-center"
-              style={{ background: 'oklch(0.78 0.16 52 / 0.06)', border: '1px solid oklch(0.78 0.16 52 / 0.15)' }}
-            >
-              <Package size={28} style={{ color: 'oklch(0.55 0.12 52)' }} />
+      {/* 表格区域 */}
+      <div className="flex-1 overflow-auto px-6 py-4">
+        {filtered.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full gap-4" style={{ color: 'oklch(0.60 0.04 280)' }}>
+            <div className="text-5xl">🎁</div>
+            <div className="text-base font-semibold">
+              {search ? '没有找到匹配的记录' : filter === 'completed' ? '还没有已完成的记录' : filter === 'pending' ? '太棒了！没有待完成的记录' : '周边清单为空'}
             </div>
-            <div className="text-center">
-              <div className="text-sm font-semibold" style={{ color: 'oklch(0.55 0.02 270)' }}>
-                {search || filterStatus !== 'all' || filterSource !== 'all' ? '没有匹配的记录' : '暂无周边记录'}
-              </div>
-              <div className="text-xs mt-1" style={{ color: 'oklch(0.40 0.015 270)' }}>
-                通过游戏结算或轮盘抽奖自动生成，或手动添加
-              </div>
-            </div>
+            {!search && filter === 'all' && (
+              <>
+                <div className="text-sm" style={{ color: 'oklch(0.70 0.02 280)' }}>游戏结算或轮盘抽奖后会自动同步，也可手动添加</div>
+                <button onClick={handleAdd} className="px-5 py-2.5 rounded-xl text-sm font-bold text-white"
+                  style={{ background: 'linear-gradient(135deg,#ec407a,#7c4dff)' }}>
+                  + 手动添加第一条
+                </button>
+              </>
+            )}
           </div>
         ) : (
-          filteredRecords.map(record => (
-            <div
-              key={record.id}
-              className="flex items-center gap-2 px-5 py-2.5 text-sm group transition-all"
-              style={{
-                borderBottom: '1px solid oklch(0.18 0.02 270)',
-                opacity: record.completed ? 0.55 : 1,
-              }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'oklch(0.155 0.022 270)'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = ''; }}
-            >
-              {/* 完成状态 */}
-              <div className="w-8 flex-shrink-0 flex justify-center">
-                <button
-                  onClick={() => handleToggleComplete(record.id)}
-                  className="w-5 h-5 rounded-lg flex items-center justify-center transition-all"
-                  style={
-                    record.completed
-                      ? { background: 'oklch(0.65 0.18 155 / 0.2)', border: '1.5px solid oklch(0.65 0.18 155)', color: 'oklch(0.65 0.18 155)' }
-                      : { border: '1.5px solid oklch(0.30 0.022 270)' }
-                  }
-                >
-                  {record.completed && <Check size={11} />}
-                </button>
-              </div>
-
-              {/* 序号 */}
-              <div className="w-12 flex-shrink-0 font-mono-display font-bold text-xs" style={{ color: 'oklch(0.60 0.20 285)' }}>
-                #{record.serialNumber}
-              </div>
-
-              {/* 身份号 */}
-              <div className="w-12 flex-shrink-0 font-mono-display font-bold" style={{ color: 'oklch(0.82 0.008 270)' }}>
-                #{record.playerNumber}
-              </div>
-
-              {/* 周边编号 */}
-              <div className="w-28 flex-shrink-0 font-mono text-xs truncate" style={{ color: 'oklch(0.72 0.015 270)' }}>
-                {record.peripheralCode}
-              </div>
-
-              {/* 来源 */}
-              <div className="flex-1 min-w-0 flex items-center gap-1.5">
-                <span
-                  className="text-xs px-2 py-0.5 rounded-full font-semibold flex-shrink-0"
-                  style={{
-                    background: SOURCE_COLORS[record.source] + '20',
-                    color: SOURCE_COLORS[record.source],
-                    border: `1px solid ${SOURCE_COLORS[record.source]}35`,
-                  }}
-                >
-                  {SOURCE_LABELS[record.source]}
-                </span>
-                {record.sourceGameName && (
-                  <span className="text-xs truncate" style={{ color: 'oklch(0.50 0.015 270)' }}>{record.sourceGameName}</span>
-                )}
-                {record.sourceWheelOption && (
-                  <span className="text-xs truncate" style={{ color: 'oklch(0.50 0.015 270)' }}>→ {record.sourceWheelOption}</span>
-                )}
-              </div>
-
-              {/* 备注 */}
-              <div className="w-32 flex-shrink-0 text-xs truncate" style={{ color: 'oklch(0.50 0.015 270)' }}>
-                {record.notes || '—'}
-              </div>
-
-              {/* 图片 */}
-              <div className="w-8 flex-shrink-0 flex justify-center">
-                {record.previewImage ? (
-                  <img src={record.previewImage} alt="" className="w-6 h-6 rounded-lg object-cover" style={{ border: '1px solid oklch(0.28 0.022 270)' }} />
-                ) : <span style={{ color: 'oklch(0.30 0.015 270)' }}>—</span>}
-              </div>
-
-              {/* 时间 */}
-              <div className="w-24 flex-shrink-0 text-xs" style={{ color: 'oklch(0.40 0.015 270)' }}>
-                {new Date(record.createdAt).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
-              </div>
-
-              {/* 操作 */}
-              <div className="w-16 flex-shrink-0 flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button
-                  onClick={() => setEditingRecord({ ...record })}
-                  className="p-1 rounded-lg transition-all"
-                  style={{ color: 'oklch(0.50 0.015 270)' }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'oklch(0.82 0.008 270)'; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'oklch(0.50 0.015 270)'; }}
-                >
-                  <Edit3 size={13} />
-                </button>
-                <button
-                  onClick={() => setDeleteConfirm(record.id)}
-                  className="p-1 rounded-lg transition-all"
-                  style={{ color: 'oklch(0.50 0.015 270)' }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'oklch(0.62 0.22 10)'; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'oklch(0.50 0.015 270)'; }}
-                >
-                  <Trash2 size={13} />
-                </button>
-              </div>
+          <div className="rounded-2xl overflow-hidden"
+            style={{ background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(200,180,240,0.2)', boxShadow: '0 4px 20px rgba(100,80,180,0.06)' }}>
+            {/* 表头 */}
+            <div className="grid text-xs font-bold px-4 py-3"
+              style={{ gridTemplateColumns: '40px 56px 56px 130px 1fr 100px 80px 48px',
+                background: 'rgba(200,180,240,0.12)', borderBottom: '1px solid rgba(200,180,240,0.2)', color: 'oklch(0.50 0.06 280)' }}>
+              <div></div><div>序号</div><div>玩家</div><div>周边编码</div><div>备注</div><div>来源</div><div>状态</div><div></div>
             </div>
-          ))
+            {/* 数据行 */}
+            <div>
+              {filtered.map(record => {
+                const src = SOURCE_LABELS[record.source] ?? { label: record.source, color: '#64748b' };
+                return (
+                  <div key={record.id}
+                    className="grid items-center px-4 py-2 transition-all"
+                    style={{ gridTemplateColumns: '40px 56px 56px 130px 1fr 100px 80px 48px',
+                      opacity: record.completed ? 0.65 : 1,
+                      borderBottom: '1px solid rgba(200,180,240,0.1)' }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.5)'; }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
+                    <div className="flex items-center justify-center">
+                      <button onClick={() => handleToggleComplete(record.id)}
+                        className="w-5 h-5 rounded-md flex items-center justify-center transition-all"
+                        style={record.completed
+                          ? { background: 'linear-gradient(135deg,#66bb6a,#26c6da)', boxShadow: '0 2px 6px rgba(102,187,106,0.4)' }
+                          : { background: 'rgba(255,255,255,0.8)', border: '1.5px solid rgba(200,180,240,0.4)' }}>
+                        {record.completed && <span className="text-white text-xs font-bold">✓</span>}
+                      </button>
+                    </div>
+                    <div className="text-sm font-bold" style={{ color: 'oklch(0.40 0.04 280)' }}>#{record.serialNumber}</div>
+                    <InlineCell value={record.playerNumber > 0 ? String(record.playerNumber) : ''}
+                      onChange={v => handleUpdate(record.id, { playerNumber: parseInt(v) || 0 })}
+                      placeholder="玩家号" type="number"
+                      style={{ color: 'oklch(0.30 0.04 280)', fontWeight: '600' }} />
+                    <InlineCell value={record.peripheralCode ?? ''}
+                      onChange={v => handleUpdate(record.id, { peripheralCode: v })}
+                      placeholder="周边编码"
+                      style={{ color: 'oklch(0.30 0.04 280)', fontFamily: 'monospace', fontSize: '12px' }} />
+                    <InlineCell value={record.notes ?? ''}
+                      onChange={v => handleUpdate(record.id, { notes: v })}
+                      placeholder="点击添加备注…"
+                      style={{ color: 'oklch(0.40 0.04 280)' }} />
+                    <div>
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold"
+                        style={{ background: `${src.color}18`, color: src.color, border: `1px solid ${src.color}33` }}>
+                        {src.label}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold"
+                        style={record.completed
+                          ? { background: 'rgba(102,187,106,0.12)', color: '#66bb6a', border: '1px solid rgba(102,187,106,0.3)' }
+                          : { background: 'rgba(245,158,11,0.12)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.3)' }}>
+                        {record.completed ? '已完成' : '待完成'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-center">
+                      <button onClick={() => handleDelete(record.id)}
+                        className="w-7 h-7 rounded-lg flex items-center justify-center text-sm transition-all"
+                        style={{ color: '#ef4444', background: 'rgba(239,68,68,0.08)', opacity: 0.4 }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = '1'; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = '0.4'; }}>
+                        ×
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            {/* 底部添加行 */}
+            <div id="peripheral-table-bottom"
+              className="px-4 py-3 flex items-center gap-2 cursor-pointer transition-all"
+              style={{ borderTop: '1px dashed rgba(200,180,240,0.3)' }}
+              onClick={handleAdd}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.4)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
+              <div className="w-5 h-5 rounded-md flex items-center justify-center"
+                style={{ background: 'rgba(200,180,240,0.2)', border: '1.5px dashed rgba(200,180,240,0.5)' }}>
+                <span className="text-xs font-bold" style={{ color: 'oklch(0.55 0.06 280)' }}>+</span>
+              </div>
+              <span className="text-sm" style={{ color: 'oklch(0.60 0.04 280)' }}>点击添加新记录…</span>
+            </div>
+          </div>
         )}
       </div>
 
-      {/* 编辑弹窗 */}
-      {editingRecord && (
-        <EditDialog
-          record={editingRecord}
-          onSave={handleSaveEdit}
-          onClose={() => setEditingRecord(null)}
-        />
+      {/* 底部汇总 */}
+      {records.length > 0 && (
+        <div className="flex-shrink-0 px-6 py-3 flex items-center justify-between"
+          style={{ background: 'rgba(255,255,255,0.4)', backdropFilter: 'blur(12px)', borderTop: '1px solid rgba(200,180,240,0.2)' }}>
+          <div className="flex items-center gap-4 text-xs" style={{ color: 'oklch(0.55 0.04 280)' }}>
+            <span>共 <strong style={{ color: 'oklch(0.35 0.04 280)' }}>{totalCount}</strong> 条记录</span>
+            <span>待完成 <strong style={{ color: '#f59e0b' }}>{pendingCount}</strong></span>
+            <span>已完成 <strong style={{ color: '#10b981' }}>{completedCount}</strong></span>
+            {totalCount > 0 && (
+              <span>完成率 <strong style={{ color: '#6366f1' }}>{Math.round((completedCount / totalCount) * 100)}%</strong></span>
+            )}
+          </div>
+          <div className="text-xs" style={{ color: 'oklch(0.65 0.02 280)' }}>点击任意单元格可直接编辑</div>
+        </div>
       )}
-
-      {/* 删除确认 */}
-      <Dialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
-        <DialogContent
-          className="max-w-xs"
-          style={{
-            background: 'oklch(0.135 0.025 270)',
-            border: '1px solid oklch(0.26 0.025 270)',
-            color: 'oklch(0.88 0.008 270)',
-          }}
-        >
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2" style={{ color: 'oklch(0.88 0.008 270)' }}>
-              <AlertCircle size={15} style={{ color: 'oklch(0.62 0.22 10)' }} />确认删除
-            </DialogTitle>
-          </DialogHeader>
-          <p className="text-sm" style={{ color: 'oklch(0.60 0.02 270)' }}>确定要删除这条周边记录吗？此操作不可撤销。</p>
-          <DialogFooter className="gap-2">
-            <button
-              onClick={() => setDeleteConfirm(null)}
-              className="px-4 py-2 rounded-xl text-sm font-semibold"
-              style={{ background: 'oklch(0.19 0.022 270)', border: '1px solid oklch(0.28 0.022 270)', color: 'oklch(0.60 0.02 270)' }}
-            >
-              取消
-            </button>
-            <button
-              onClick={() => deleteConfirm && handleDelete(deleteConfirm)}
-              className="px-4 py-2 rounded-xl text-sm font-semibold"
-              style={{ background: 'oklch(0.62 0.22 10 / 0.2)', border: '1px solid oklch(0.62 0.22 10 / 0.5)', color: 'oklch(0.72 0.20 10)' }}
-            >
-              删除
-            </button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

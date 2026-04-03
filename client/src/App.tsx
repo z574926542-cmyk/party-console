@@ -9,7 +9,6 @@ import ConsolePage from "./pages/ConsolePage";
 import StagePage from "./pages/StagePage";
 import WheelPage from "./pages/WheelPage";
 import PeripheralPage from "./pages/PeripheralPage";
-import ToolsPage from "./pages/ToolsPage";
 import NotFound from "./pages/NotFound";
 
 function Router() {
@@ -20,7 +19,6 @@ function Router() {
         <Route path="/stage" component={StagePage} />
         <Route path="/wheel" component={WheelPage} />
         <Route path="/peripheral" component={PeripheralPage} />
-        <Route path="/tools" component={ToolsPage} />
         <Route component={NotFound} />
       </Switch>
     </MainLayout>
@@ -30,10 +28,10 @@ function Router() {
 function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider defaultTheme="dark">
+      <ThemeProvider defaultTheme="light">
         <AppProvider>
           <TooltipProvider>
-            <Toaster position="top-right" theme="dark" />
+            <Toaster position="top-right" />
             <Router />
           </TooltipProvider>
         </AppProvider>

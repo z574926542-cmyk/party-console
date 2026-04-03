@@ -1,32 +1,19 @@
+/* ============================================================
+   奇妙奇遇控制台 - 设计系统
+   风格：亮色渐变 · 磨砂卡片 · 柔和圆角
+   参考：健康追踪 App 风格（彩色渐变背景 + 白色卡片）
+   ============================================================ */
+
 @import "tailwindcss";
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
-
-/* ============================================================
-   奇妙奇遇游戏控制台 — 设计系统 v2.0
-   气质：微醺 · 夜晚 · 社交娱乐 · 轻戏剧感 · 年轻时尚
-   
-   色彩哲学：
-   - 底色：深紫黑（不是纯黑，有温度）
-   - 主色：暖金（品牌感、仪式感）
-   - 辅色：酒红（激情、游戏感）
-   - 点缀：冷紫（神秘感）
-   - 文字：冷白（清晰、高级）
-   
-   层级规则：
-   --bg-base       最底层背景
-   --bg-surface    卡片/面板层
-   --bg-elevated   悬浮/弹窗层
-   --bg-overlay    遮罩层
-   ============================================================ */
 
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-  --radius-2xl: calc(var(--radius) + 8px);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -62,137 +49,115 @@
 }
 
 :root {
-  /* ---- 圆角系统 ---- */
-  --radius: 0.625rem;  /* 10px base */
+  --radius: 1rem;
 
-  /* ---- 底色系统：深紫黑，有温度 ---- */
-  /* hue 270 = 紫调，chroma 0.025 = 极低饱和，有色温但不艳 */
-  --background:        oklch(0.115 0.025 270);   /* #0e0c14 深紫黑底 */
-  --foreground:        oklch(0.93  0.008 270);   /* #eeeaf5 冷白文字 */
+  /* ---- 主色系：渐变粉紫蓝 ---- */
+  --primary: oklch(0.62 0.22 310);           /* 亮紫粉 */
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.65 0.18 250);         /* 蓝紫 */
+  --secondary-foreground: oklch(1 0 0);
 
-  /* ---- 卡片/面板层 ---- */
-  --card:              oklch(0.165 0.025 270);   /* #1a1724 面板底 */
-  --card-foreground:   oklch(0.93  0.008 270);
+  /* ---- 背景：极浅暖白 ---- */
+  --background: oklch(0.97 0.005 280);
+  --foreground: oklch(0.22 0.02 280);
 
-  /* ---- 弹窗层（比卡片稍亮） ---- */
-  --popover:           oklch(0.195 0.028 270);   /* #201d2e 弹窗底 */
-  --popover-foreground:oklch(0.93  0.008 270);
+  /* ---- 卡片：纯白磨砂 ---- */
+  --card: oklch(1 0 0 / 0.85);
+  --card-foreground: oklch(0.22 0.02 280);
 
-  /* ---- 主色：暖金 ---- */
-  /* hue 52 = 金黄，chroma 0.18 = 中饱和，有品牌感不刺眼 */
-  --primary:           oklch(0.78  0.16  52);    /* #d4a843 暖金 */
-  --primary-foreground:oklch(0.12  0.02  52);    /* 深棕底文字 */
-
-  /* ---- 次要色：暗面板 ---- */
-  --secondary:         oklch(0.21  0.025 270);   /* #1f1c2c 次要底 */
-  --secondary-foreground:oklch(0.78 0.01  270);
+  /* ---- 弹窗 ---- */
+  --popover: oklch(1 0 0 / 0.95);
+  --popover-foreground: oklch(0.22 0.02 280);
 
   /* ---- 静音色 ---- */
-  --muted:             oklch(0.19  0.02  270);
-  --muted-foreground:  oklch(0.55  0.02  270);   /* 中灰文字 */
+  --muted: oklch(0.94 0.008 280);
+  --muted-foreground: oklch(0.52 0.02 280);
 
-  /* ---- 强调色：酒红/玫瑰 ---- */
-  /* hue 10 = 偏暖红，低饱和版 */
-  --accent:            oklch(0.58  0.18  10);    /* #b84a3a 酒红 */
-  --accent-foreground: oklch(0.97  0.005 10);
+  /* ---- 强调色 ---- */
+  --accent: oklch(0.93 0.04 310);
+  --accent-foreground: oklch(0.35 0.15 310);
 
   /* ---- 危险色 ---- */
-  --destructive:       oklch(0.60  0.22  15);
-  --destructive-foreground: oklch(0.97 0 0);
+  --destructive: oklch(0.62 0.22 25);
+  --destructive-foreground: oklch(1 0 0);
 
-  /* ---- 边框系统 ---- */
-  --border:            oklch(0.28  0.025 270);   /* 微亮紫灰边框 */
-  --input:             oklch(0.20  0.025 270);
-  --ring:              oklch(0.78  0.16  52);    /* 焦点环用主色金 */
+  /* ---- 边框/输入 ---- */
+  --border: oklch(0.88 0.01 280);
+  --input: oklch(0.96 0.005 280);
+  --ring: oklch(0.62 0.22 310 / 0.4);
 
   /* ---- 图表色 ---- */
-  --chart-1: oklch(0.78 0.16  52);    /* 金 */
-  --chart-2: oklch(0.65 0.18  160);   /* 翠绿 */
-  --chart-3: oklch(0.60 0.18  270);   /* 紫 */
-  --chart-4: oklch(0.58 0.18  10);    /* 酒红 */
-  --chart-5: oklch(0.70 0.15  220);   /* 蓝 */
+  --chart-1: oklch(0.72 0.2 340);
+  --chart-2: oklch(0.65 0.2 280);
+  --chart-3: oklch(0.70 0.18 200);
+  --chart-4: oklch(0.75 0.16 140);
+  --chart-5: oklch(0.78 0.14 60);
 
-  /* ---- 侧边栏（比主背景稍深） ---- */
-  --sidebar:           oklch(0.095 0.022 270);   /* #0a0812 最深底 */
-  --sidebar-foreground:oklch(0.82  0.01  270);
-  --sidebar-primary:   oklch(0.78  0.16  52);
-  --sidebar-primary-foreground: oklch(0.12 0.02 52);
-  --sidebar-accent:    oklch(0.165 0.025 270);
-  --sidebar-accent-foreground: oklch(0.82 0.01 270);
-  --sidebar-border:    oklch(0.20  0.022 270);
-  --sidebar-ring:      oklch(0.78  0.16  52);
+  /* ---- 侧边/顶栏 ---- */
+  --sidebar: oklch(1 0 0 / 0.7);
+  --sidebar-foreground: oklch(0.22 0.02 280);
+  --sidebar-primary: oklch(0.62 0.22 310);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.93 0.04 310);
+  --sidebar-accent-foreground: oklch(0.35 0.15 310);
+  --sidebar-border: oklch(0.88 0.01 280 / 0.5);
+  --sidebar-ring: oklch(0.62 0.22 310 / 0.4);
 
-  /* ---- 自定义品牌色 Token（供组件直接使用） ---- */
-  --gold:              oklch(0.78  0.16  52);     /* 暖金主色 */
-  --gold-dim:          oklch(0.65  0.12  52);     /* 暗金 */
-  --gold-glow:         oklch(0.78  0.16  52 / 0.25);
-  --wine:              oklch(0.52  0.18  10);     /* 酒红 */
-  --wine-dim:          oklch(0.42  0.14  10);
-  --wine-glow:         oklch(0.52  0.18  10 / 0.25);
-  --violet:            oklch(0.60  0.20  285);    /* 冷紫 */
-  --violet-dim:        oklch(0.48  0.16  285);
-  --violet-glow:       oklch(0.60  0.20  285 / 0.25);
-  --emerald:           oklch(0.65  0.18  155);    /* 翠绿（胜者） */
-  --rose:              oklch(0.62  0.22  10);     /* 玫瑰（败者） */
-  --sky:               oklch(0.68  0.16  220);    /* 天蓝 */
-  --amber:             oklch(0.75  0.18  65);     /* 琥珀 */
+  /* ---- 自定义渐变色 ---- */
+  --grad-hero: linear-gradient(135deg, #fce4ec 0%, #e8eaf6 35%, #e0f7fa 70%, #f3e5f5 100%);
+  --grad-primary: linear-gradient(135deg, #ec407a 0%, #7c4dff 50%, #42a5f5 100%);
+  --grad-warm: linear-gradient(135deg, #ff8a65 0%, #ffca28 100%);
+  --grad-cool: linear-gradient(135deg, #42a5f5 0%, #7c4dff 100%);
+  --grad-green: linear-gradient(135deg, #66bb6a 0%, #26c6da 100%);
+  --grad-rose: linear-gradient(135deg, #f48fb1 0%, #ce93d8 100%);
+  --grad-card: linear-gradient(145deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%);
+
+  /* ---- 阴影 ---- */
+  --shadow-card: 0 4px 24px rgba(100, 80, 180, 0.10), 0 1px 4px rgba(0,0,0,0.06);
+  --shadow-card-hover: 0 8px 32px rgba(100, 80, 180, 0.18), 0 2px 8px rgba(0,0,0,0.08);
+  --shadow-btn: 0 4px 16px rgba(100, 80, 180, 0.25);
+  --shadow-modal: 0 20px 60px rgba(80, 60, 160, 0.2), 0 4px 16px rgba(0,0,0,0.1);
 }
 
-/* ============================================================
-   字体系统
-   ============================================================ */
+/* ---- 深色模式（保留兼容，但主要用亮色） ---- */
+.dark {
+  --background: oklch(0.14 0.02 280);
+  --foreground: oklch(0.92 0.005 280);
+  --card: oklch(0.20 0.02 280 / 0.8);
+  --card-foreground: oklch(0.92 0.005 280);
+  --popover: oklch(0.20 0.02 280 / 0.95);
+  --popover-foreground: oklch(0.92 0.005 280);
+  --primary: oklch(0.72 0.22 310);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.25 0.02 280);
+  --secondary-foreground: oklch(0.85 0.005 280);
+  --muted: oklch(0.25 0.015 280);
+  --muted-foreground: oklch(0.60 0.015 280);
+  --accent: oklch(0.28 0.04 310);
+  --accent-foreground: oklch(0.85 0.04 310);
+  --destructive: oklch(0.65 0.22 25);
+  --destructive-foreground: oklch(1 0 0);
+  --border: oklch(1 0 0 / 0.1);
+  --input: oklch(1 0 0 / 0.08);
+  --ring: oklch(0.72 0.22 310 / 0.4);
+  --sidebar: oklch(0.18 0.02 280 / 0.8);
+  --sidebar-foreground: oklch(0.92 0.005 280);
+  --sidebar-border: oklch(1 0 0 / 0.08);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
-
+  html {
+    font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  }
   body {
     @apply bg-background text-foreground;
-    font-family: 'Sora', 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
-    font-size: 14px;
-    line-height: 1.6;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+    background: var(--grad-hero);
+    background-attachment: fixed;
+    min-height: 100vh;
   }
-
-  /* 数字等宽字体 */
-  .font-mono-display {
-    font-family: 'JetBrains Mono', 'SF Mono', 'Consolas', monospace;
-    font-variant-numeric: tabular-nums;
-    letter-spacing: 0.04em;
-  }
-
-  /* 标题字体层级 */
-  .text-display {
-    font-size: 2rem;
-    font-weight: 800;
-    letter-spacing: -0.02em;
-    line-height: 1.2;
-  }
-  .text-heading {
-    font-size: 1.25rem;
-    font-weight: 700;
-    letter-spacing: -0.01em;
-    line-height: 1.3;
-  }
-  .text-subheading {
-    font-size: 1rem;
-    font-weight: 600;
-    line-height: 1.4;
-  }
-  .text-label {
-    font-size: 0.6875rem;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: oklch(0.55 0.02 270);
-  }
-  .text-caption {
-    font-size: 0.75rem;
-    color: oklch(0.55 0.02 270);
-    line-height: 1.4;
-  }
-
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]),
   [type="button"]:not(:disabled),
@@ -202,433 +167,367 @@
   select:not(:disabled),
   input[type="checkbox"]:not(:disabled),
   input[type="radio"]:not(:disabled) {
-    cursor: pointer;
+    @apply cursor-pointer;
+  }
+  /* 滚动条美化 */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: oklch(0.75 0.08 310 / 0.4);
+    border-radius: 999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: oklch(0.65 0.15 310 / 0.6);
   }
 }
 
-/* ============================================================
-   组件系统
-   ============================================================ */
 @layer components {
-
-  /* ---- 布局工具 ---- */
   .container {
     width: 100%;
     margin-left: auto;
     margin-right: auto;
-    padding-left: 1.5rem;
-    padding-right: 1.5rem;
-    max-width: 1440px;
-  }
-  .flex { min-height: 0; min-width: 0; }
-
-  /* ============================================================
-     卡片系统
-     规则：3层深度
-     - .card-base    = 标准内容卡片
-     - .card-raised  = 悬浮/强调卡片
-     - .card-inset   = 内嵌/输入区域
-     ============================================================ */
-  .card-base {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-xl);
-    box-shadow: 0 2px 8px oklch(0 0 0 / 0.3), 0 0 0 0.5px oklch(1 0 0 / 0.04) inset;
-  }
-  .card-raised {
-    background: var(--popover);
-    border: 1px solid oklch(0.32 0.03 270);
-    border-radius: var(--radius-xl);
-    box-shadow: 0 4px 16px oklch(0 0 0 / 0.4), 0 0 0 0.5px oklch(1 0 0 / 0.06) inset;
-  }
-  .card-inset {
-    background: oklch(0.14 0.022 270);
-    border: 1px solid oklch(0.24 0.022 270);
-    border-radius: var(--radius-lg);
+    padding-left: 1rem;
+    padding-right: 1rem;
   }
 
-  /* 金色光晕卡片（特殊强调） */
-  .card-gold {
-    background: oklch(0.165 0.025 270);
-    border: 1px solid oklch(0.78 0.16 52 / 0.3);
-    border-radius: var(--radius-xl);
-    box-shadow: 0 0 20px oklch(0.78 0.16 52 / 0.08), 0 4px 16px oklch(0 0 0 / 0.3);
+  .flex {
+    min-height: 0;
+    min-width: 0;
   }
 
-  /* ============================================================
-     按钮系统
-     ============================================================ */
-  /* 主按钮：金色品牌按钮 */
-  .btn-primary {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.375rem;
-    padding: 0.5rem 1.25rem;
-    border-radius: var(--radius-lg);
-    font-size: 0.875rem;
-    font-weight: 600;
-    letter-spacing: 0.01em;
-    background: linear-gradient(135deg, oklch(0.82 0.17 52), oklch(0.72 0.15 45));
-    color: oklch(0.12 0.02 52);
-    border: 1px solid oklch(0.85 0.14 55 / 0.5);
-    box-shadow: 0 2px 8px oklch(0.78 0.16 52 / 0.3), 0 1px 0 oklch(1 0 0 / 0.15) inset;
-    transition: all 0.15s ease;
+  @media (min-width: 640px) {
+    .container {
+      padding-left: 1.5rem;
+      padding-right: 1.5rem;
+    }
   }
-  .btn-primary:hover {
-    background: linear-gradient(135deg, oklch(0.86 0.17 52), oklch(0.76 0.15 45));
-    box-shadow: 0 4px 16px oklch(0.78 0.16 52 / 0.4), 0 1px 0 oklch(1 0 0 / 0.2) inset;
+
+  @media (min-width: 1024px) {
+    .container {
+      padding-left: 2rem;
+      padding-right: 2rem;
+      max-width: 1280px;
+    }
+  }
+
+  /* ---- 玻璃卡片 ---- */
+  .glass-card {
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    box-shadow: var(--shadow-card);
+    border-radius: 1.25rem;
+  }
+
+  .glass-card-hover {
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+  }
+  .glass-card-hover:hover {
+    box-shadow: var(--shadow-card-hover);
     transform: translateY(-1px);
   }
-  .btn-primary:active { transform: translateY(0); }
 
-  /* 次要按钮：轮廓风格 */
-  .btn-ghost {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.375rem;
-    padding: 0.5rem 1rem;
-    border-radius: var(--radius-lg);
-    font-size: 0.875rem;
-    font-weight: 500;
-    background: transparent;
-    color: oklch(0.72 0.02 270);
-    border: 1px solid oklch(0.28 0.025 270);
-    transition: all 0.15s ease;
+  /* ---- 渐变按钮 ---- */
+  .btn-gradient {
+    background: var(--grad-primary);
+    color: white;
+    border: none;
+    box-shadow: var(--shadow-btn);
+    transition: opacity 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
   }
-  .btn-ghost:hover {
-    background: oklch(0.22 0.025 270);
-    color: oklch(0.90 0.008 270);
-    border-color: oklch(0.35 0.025 270);
+  .btn-gradient:hover {
+    opacity: 0.92;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(100, 80, 180, 0.35);
+  }
+  .btn-gradient:active {
+    transform: translateY(0);
+    opacity: 0.85;
   }
 
-  /* 危险按钮 */
-  .btn-danger {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.375rem;
-    padding: 0.5rem 1rem;
-    border-radius: var(--radius-lg);
-    font-size: 0.875rem;
-    font-weight: 600;
-    background: oklch(0.52 0.18 10 / 0.15);
-    color: oklch(0.72 0.18 10);
-    border: 1px solid oklch(0.52 0.18 10 / 0.35);
-    transition: all 0.15s ease;
-  }
-  .btn-danger:hover {
-    background: oklch(0.52 0.18 10 / 0.25);
-    color: oklch(0.82 0.18 10);
-  }
-
-  /* ============================================================
-     标签系统（高频组件，品牌化处理）
-     ============================================================ */
-  /* 基础标签 */
-  .tag {
+  /* ---- 渐变标签 ---- */
+  .tag-pill {
     display: inline-flex;
     align-items: center;
     gap: 0.25rem;
-    padding: 0.2rem 0.625rem;
-    border-radius: 9999px;
-    font-size: 0.6875rem;
-    font-weight: 600;
-    letter-spacing: 0.03em;
-    border: 1px solid transparent;
-    transition: all 0.15s ease;
-    white-space: nowrap;
-  }
-
-  /* 工具标签（可点击，展台调用工具） */
-  .tool-tag {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.375rem;
-    padding: 0.3rem 0.75rem;
-    border-radius: var(--radius-lg);
+    padding: 0.2rem 0.65rem;
+    border-radius: 999px;
     font-size: 0.75rem;
     font-weight: 600;
-    background: oklch(0.21 0.025 270);
-    border: 1px solid oklch(0.30 0.025 270);
-    color: oklch(0.72 0.02 270);
-    cursor: pointer;
-    transition: all 0.15s ease;
-    letter-spacing: 0.01em;
-  }
-  .tool-tag:hover {
-    background: oklch(0.78 0.16 52 / 0.12);
-    border-color: oklch(0.78 0.16 52 / 0.4);
-    color: oklch(0.85 0.14 52);
-    box-shadow: 0 0 8px oklch(0.78 0.16 52 / 0.15);
-    transform: translateY(-1px);
-  }
-  .tool-tag:active { transform: translateY(0); }
-
-  /* 状态标签 */
-  .tag-win {
-    background: oklch(0.65 0.18 155 / 0.15);
-    color: oklch(0.75 0.18 155);
-    border-color: oklch(0.65 0.18 155 / 0.3);
-  }
-  .tag-lose {
-    background: oklch(0.62 0.22 10 / 0.15);
-    color: oklch(0.72 0.20 10);
-    border-color: oklch(0.62 0.22 10 / 0.3);
-  }
-  .tag-done {
-    background: oklch(0.65 0.18 155 / 0.12);
-    color: oklch(0.70 0.15 155);
-    border-color: oklch(0.65 0.18 155 / 0.25);
-  }
-  .tag-pending {
-    background: oklch(0.75 0.18 65 / 0.12);
-    color: oklch(0.78 0.16 65);
-    border-color: oklch(0.75 0.18 65 / 0.25);
+    letter-spacing: 0.02em;
   }
 
-  /* ============================================================
-     导航系统
-     ============================================================ */
-  .nav-item {
+  /* ---- 顶部导航栏 ---- */
+  .top-nav {
+    background: rgba(255, 255, 255, 0.72);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 0 2px 16px rgba(100, 80, 180, 0.08);
+  }
+
+  /* ---- 内容区域 ---- */
+  .page-content {
+    min-height: calc(100vh - 64px);
+    padding: 1.5rem;
+  }
+
+  /* ---- 输入框 ---- */
+  .input-glass {
+    background: rgba(255, 255, 255, 0.7);
+    border: 1.5px solid rgba(200, 180, 240, 0.4);
+    border-radius: 0.75rem;
+    padding: 0.6rem 0.9rem;
+    font-size: 0.9rem;
+    color: oklch(0.22 0.02 280);
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none;
+    width: 100%;
+  }
+  .input-glass:focus {
+    border-color: oklch(0.62 0.22 310 / 0.6);
+    box-shadow: 0 0 0 3px oklch(0.62 0.22 310 / 0.12);
+  }
+  .input-glass::placeholder {
+    color: oklch(0.65 0.02 280);
+  }
+
+  /* ---- 段落标题 ---- */
+  .section-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: oklch(0.55 0.08 310);
+    margin-bottom: 0.5rem;
+  }
+
+  /* ---- 状态徽章 ---- */
+  .badge-success {
+    background: linear-gradient(135deg, #a8edea, #fed6e3);
+    color: oklch(0.35 0.12 160);
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 600;
+  }
+  .badge-pending {
+    background: linear-gradient(135deg, #ffecd2, #fcb69f);
+    color: oklch(0.40 0.15 40);
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 600;
+  }
+
+  /* ---- 渐变背景区块 ---- */
+  .grad-block-purple {
+    background: linear-gradient(135deg, #e8d5f5 0%, #d4e4f7 100%);
+  }
+  .grad-block-rose {
+    background: linear-gradient(135deg, #fce4ec 0%, #f3e5f5 100%);
+  }
+  .grad-block-teal {
+    background: linear-gradient(135deg, #e0f7fa 0%, #e8f5e9 100%);
+  }
+  .grad-block-amber {
+    background: linear-gradient(135deg, #fff8e1 0%, #fce4ec 100%);
+  }
+
+  /* ---- 工具弹窗遮罩 ---- */
+  .tool-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(100, 80, 180, 0.15);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 50;
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    padding: 0.625rem 0.875rem;
-    border-radius: var(--radius-lg);
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: oklch(0.55 0.02 270);
-    transition: all 0.2s ease;
-    cursor: pointer;
-    position: relative;
-  }
-  .nav-item:hover {
-    background: oklch(0.20 0.025 270);
-    color: oklch(0.85 0.01 270);
-  }
-  .nav-item.active {
-    color: oklch(0.90 0.01 270);
+    justify-content: center;
   }
 
-  /* ============================================================
-     输入框增强
-     ============================================================ */
-  .input-dark {
-    background: oklch(0.14 0.022 270);
-    border: 1px solid oklch(0.26 0.025 270);
-    border-radius: var(--radius-lg);
-    color: oklch(0.90 0.008 270);
-    transition: all 0.15s ease;
-  }
-  .input-dark:focus {
-    border-color: oklch(0.78 0.16 52 / 0.6);
-    box-shadow: 0 0 0 3px oklch(0.78 0.16 52 / 0.12);
-    outline: none;
-  }
-  .input-dark::placeholder {
-    color: oklch(0.45 0.015 270);
-  }
-
-  /* ============================================================
-     分割线
-     ============================================================ */
-  .divider {
-    height: 1px;
-    background: linear-gradient(90deg, transparent, oklch(0.28 0.025 270), transparent);
-  }
-
-  /* ============================================================
-     区块标题（section header）
-     ============================================================ */
-  .section-label {
-    font-size: 0.6875rem;
+  /* ---- 身份卡属性按钮 ---- */
+  .attr-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.3rem 0.7rem;
+    border-radius: 0.6rem;
+    font-size: 0.75rem;
     font-weight: 700;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: oklch(0.50 0.025 270);
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    user-select: none;
+  }
+  .attr-btn-inactive {
+    background: rgba(200, 190, 230, 0.2);
+    border-color: rgba(180, 170, 220, 0.3);
+    color: oklch(0.60 0.05 280);
+  }
+  .attr-btn-inactive:hover {
+    background: rgba(200, 190, 230, 0.4);
+    border-color: rgba(160, 140, 210, 0.5);
+    transform: scale(1.05);
+  }
+  .attr-btn-male {
+    background: linear-gradient(135deg, #bbdefb, #90caf9);
+    border-color: #64b5f6;
+    color: #1565c0;
+  }
+  .attr-btn-female {
+    background: linear-gradient(135deg, #f8bbd0, #f48fb1);
+    border-color: #f06292;
+    color: #880e4f;
+  }
+  .attr-btn-extrovert {
+    background: linear-gradient(135deg, #fff9c4, #ffcc02);
+    border-color: #ffa000;
+    color: #e65100;
+  }
+  .attr-btn-introvert {
+    background: linear-gradient(135deg, #e8eaf6, #c5cae9);
+    border-color: #9fa8da;
+    color: #283593;
   }
 
-  /* ============================================================
-     滚动条
-     ============================================================ */
-  ::-webkit-scrollbar { width: 4px; height: 4px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb {
-    background: oklch(0.28 0.025 270);
-    border-radius: 2px;
-  }
-  ::-webkit-scrollbar-thumb:hover { background: oklch(0.38 0.025 270); }
+  /* ---- 动画 ---- */
 
-  /* ============================================================
-     动效系统（克制、有质感）
-     ============================================================ */
+  .animate-fade-in-up  { animation: fadeInUp 0.35s ease both; }
+  .animate-fade-in     { animation: fadeIn 0.25s ease both; }
+  .animate-scale-in    { animation: scaleIn 0.25s ease both; }
+  .animate-slide-right { animation: slideInRight 0.3s ease both; }
+  .animate-pulse-glow  { animation: pulse-glow 2s ease-in-out infinite; }
+  .animate-dice-shake  { animation: dice-shake 0.5s ease; }
+  .animate-number-pop  { animation: number-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+  .animate-countdown   { animation: countdown-pulse 1s ease-in-out infinite; }
 
-  /* 弹入（弹窗/卡片出现） */
-  @keyframes pop-in {
-    from { opacity: 0; transform: scale(0.96) translateY(6px); }
-    to   { opacity: 1; transform: scale(1)    translateY(0);   }
-  }
-  .animate-pop-in { animation: pop-in 0.22s cubic-bezier(0.34, 1.56, 0.64, 1); }
-
-  /* 淡入（页面切换） */
-  @keyframes fade-in {
-    from { opacity: 0; transform: translateY(4px); }
-    to   { opacity: 1; transform: translateY(0);   }
-  }
-  .animate-fade-in { animation: fade-in 0.25s ease-out; }
-
-  /* 从右滑入（侧面板） */
-  @keyframes slide-in-right {
-    from { opacity: 0; transform: translateX(16px); }
-    to   { opacity: 1; transform: translateX(0);    }
-  }
-  .animate-slide-in-right { animation: slide-in-right 0.22s ease-out; }
-
-  /* 数字滚动 */
-  @keyframes number-roll {
-    from { opacity: 0; transform: translateY(-30%); }
-    to   { opacity: 1; transform: translateY(0);    }
-  }
-  .animate-number-roll { animation: number-roll 0.2s ease-out; }
-
-  /* 结果弹出（轮盘/抽奖强调） */
-  @keyframes result-pop {
-    0%   { opacity: 0; transform: scale(0.7); }
-    60%  { transform: scale(1.08); }
-    100% { opacity: 1; transform: scale(1); }
-  }
-  .animate-result-pop { animation: result-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
-
-  /* 金色光晕脉冲 */
-  @keyframes gold-pulse {
-    0%, 100% { box-shadow: 0 0 0 0 oklch(0.78 0.16 52 / 0.4); }
-    50%       { box-shadow: 0 0 0 8px oklch(0.78 0.16 52 / 0); }
-  }
-  .animate-gold-pulse { animation: gold-pulse 2s ease-in-out infinite; }
-
-  /* 倒计时紧张脉冲 */
-  @keyframes danger-pulse {
-    0%, 100% { box-shadow: 0 0 0 0 oklch(0.62 0.22 10 / 0.5); }
-    50%       { box-shadow: 0 0 0 10px oklch(0.62 0.22 10 / 0); }
-  }
-  .animate-danger-pulse { animation: danger-pulse 0.8s ease-in-out infinite; }
-
-  /* 微浮动（hover 卡片） */
-  .hover-lift {
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-  }
-  .hover-lift:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px oklch(0 0 0 / 0.4);
-  }
-
-  /* ============================================================
-     玻璃效果（弹窗/浮层）
-     ============================================================ */
-  .glass {
-    background: oklch(0.195 0.028 270 / 0.92);
-    backdrop-filter: blur(16px) saturate(1.4);
-    -webkit-backdrop-filter: blur(16px) saturate(1.4);
-    border: 1px solid oklch(0.35 0.03 270 / 0.5);
-  }
-
-  /* ============================================================
-     展台专用：舞台感组件
-     ============================================================ */
-  .stage-title {
-    font-size: 2.5rem;
-    font-weight: 800;
-    letter-spacing: -0.02em;
-    background: linear-gradient(135deg, oklch(0.93 0.008 270), oklch(0.78 0.16 52));
+  /* ---- 渐变文字 ---- */
+  .text-gradient {
+    background: var(--grad-primary);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
-    line-height: 1.15;
   }
 
-  .stage-rule-card {
-    background: oklch(0.165 0.025 270);
-    border: 1px solid oklch(0.30 0.025 270);
-    border-radius: var(--radius-xl);
-    box-shadow: 0 4px 20px oklch(0 0 0 / 0.35);
-  }
-
-  .stage-win-card {
-    background: oklch(0.65 0.18 155 / 0.08);
-    border: 1px solid oklch(0.65 0.18 155 / 0.25);
-    border-radius: var(--radius-xl);
-  }
-
-  .stage-lose-card {
-    background: oklch(0.62 0.22 10 / 0.08);
-    border: 1px solid oklch(0.62 0.22 10 / 0.25);
-    border-radius: var(--radius-xl);
-  }
-
-  /* ============================================================
-     周边清单：陈列感
-     ============================================================ */
+  /* ---- 周边清单内联编辑行 ---- */
   .peripheral-row {
-    display: flex;
+    display: grid;
+    grid-template-columns: 2.5rem 3.5rem 1fr 1fr 5rem 5rem 2.5rem;
+    gap: 0.5rem;
     align-items: center;
-    gap: 0.75rem;
-    padding: 0.75rem 1rem;
-    border-radius: var(--radius-lg);
-    border: 1px solid oklch(0.24 0.022 270);
-    background: oklch(0.155 0.022 270);
-    transition: all 0.15s ease;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.75rem;
+    transition: background 0.15s;
   }
   .peripheral-row:hover {
-    background: oklch(0.185 0.025 270);
-    border-color: oklch(0.30 0.025 270);
+    background: rgba(200, 180, 240, 0.12);
   }
-  .peripheral-row.done {
-    opacity: 0.55;
-    background: oklch(0.145 0.018 270);
+  .peripheral-row .inline-input {
+    background: transparent;
+    border: none;
+    border-bottom: 1.5px solid transparent;
+    border-radius: 0;
+    padding: 0.2rem 0.3rem;
+    font-size: 0.85rem;
+    color: oklch(0.25 0.02 280);
+    outline: none;
+    width: 100%;
+    transition: border-color 0.15s;
+  }
+  .peripheral-row .inline-input:focus {
+    border-bottom-color: oklch(0.62 0.22 310 / 0.5);
+  }
+  .peripheral-row .inline-input::placeholder {
+    color: oklch(0.70 0.02 280);
   }
 
-  /* ============================================================
-     玩家号码格（身份信息/选人面板）
-     ============================================================ */
-  .player-cell {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.2rem;
-    padding: 0.5rem 0.25rem;
-    border-radius: var(--radius-lg);
-    border: 1px solid oklch(0.24 0.022 270);
-    background: oklch(0.155 0.022 270);
-    cursor: pointer;
-    transition: all 0.15s ease;
-    min-width: 0;
+  /* ---- 轮盘结果弹出 ---- */
+  .animate-result-pop { animation: result-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
+  /* ---- 倒计时圆形进度 ---- */
+  .countdown-ring {
+    filter: drop-shadow(0 0 8px rgba(124, 77, 255, 0.4));
   }
-  .player-cell:hover {
-    border-color: oklch(0.78 0.16 52 / 0.4);
-    background: oklch(0.78 0.16 52 / 0.06);
+
+  /* ---- 工具弹窗内容 ---- */
+  .tool-modal {
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    box-shadow: var(--shadow-modal);
+    border-radius: 1.5rem;
+    max-height: 90vh;
+    overflow-y: auto;
   }
-  .player-cell.selected {
-    border-color: oklch(0.78 0.16 52 / 0.7);
-    background: oklch(0.78 0.16 52 / 0.12);
-    box-shadow: 0 0 8px oklch(0.78 0.16 52 / 0.2);
-  }
-  .player-cell.male {
-    border-color: oklch(0.60 0.18 220 / 0.4);
-    background: oklch(0.60 0.18 220 / 0.07);
-  }
-  .player-cell.female {
-    border-color: oklch(0.65 0.20 350 / 0.4);
-    background: oklch(0.65 0.20 350 / 0.07);
-  }
-  .player-cell.introvert {
-    border-color: oklch(0.60 0.20 285 / 0.4);
-    background: oklch(0.60 0.20 285 / 0.07);
-  }
-  .player-cell.extrovert {
-    border-color: oklch(0.75 0.18 65 / 0.4);
-    background: oklch(0.75 0.18 65 / 0.07);
-  }
+}
+
+
+/* ---- Animations (outside @layer for Tailwind 4 compatibility) ---- */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.94); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(124, 77, 255, 0.3); }
+  50%       { box-shadow: 0 0 0 8px rgba(124, 77, 255, 0); }
+}
+
+@keyframes spin-wheel {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes countdown-pulse {
+  0%, 100% { transform: scale(1); }
+  50%       { transform: scale(1.04); }
+}
+
+@keyframes dice-shake {
+  0%, 100% { transform: rotate(0deg); }
+  20%       { transform: rotate(-12deg); }
+  40%       { transform: rotate(12deg); }
+  60%       { transform: rotate(-8deg); }
+  80%       { transform: rotate(8deg); }
+}
+
+@keyframes number-pop {
+  0%   { transform: scale(0.8); opacity: 0; }
+  60%  { transform: scale(1.1); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+@keyframes result-pop {
+  0%   { transform: scale(0.5) rotate(-10deg); opacity: 0; }
+  60%  { transform: scale(1.08) rotate(2deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
 }
