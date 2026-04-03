@@ -1,0 +1,71 @@
+appId: com.partyConsole.app
+productName: 奇妙奇遇游戏控制台
+copyright: Copyright © 2025
+
+# 应用图标（需要放在 electron/icons/ 目录下）
+# icon: electron/icons/icon
+
+directories:
+  buildResources: electron/icons
+  output: release
+
+# 打包文件范围
+files:
+  - dist/public/**
+  - electron/main.js
+  - electron/package.json
+  - "!node_modules/**"
+  - "!client/**"
+  - "!server/**"
+  - "!shared/**"
+  - "!.manus-logs/**"
+  - "!patches/**"
+
+# 额外资源
+extraMetadata:
+  main: electron/main.js
+
+# macOS 配置
+mac:
+  category: public.app-category.entertainment
+  target:
+    - target: dmg
+      arch:
+        - x64
+        - arm64
+  darkModeSupport: true
+
+dmg:
+  title: 奇妙奇遇游戏控制台
+  contents:
+    - x: 410
+      y: 150
+      type: link
+      path: /Applications
+    - x: 130
+      y: 150
+      type: file
+
+# Windows 配置
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  publisherName: PartyConsole
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: 奇妙奇遇游戏控制台
+  installerLanguages:
+    - zh_CN
+  language: 2052
+
+# Linux 配置（可选）
+linux:
+  target:
+    - AppImage
+  category: Game

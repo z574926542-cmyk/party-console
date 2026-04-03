@@ -1,0 +1,136 @@
+name: 构建桌面安装包
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '版本号 (例如: 1.0.0)'
+        required: false
+        default: '1.0.0'
+
+jobs:
+  build-mac:
+    name: 构建 macOS (.dmg)
+    runs-on: macos-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 安装 pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: 准备桌面版 package.json
+        run: cp package.desktop.json package.json.bak && cp package.desktop.json package.json
+
+      - name: 安装依赖
+        run: pnpm install --no-frozen-lockfile
+
+      - name: 构建 Web 资源
+        run: pnpm build:web
+        env:
+          NODE_ENV: production
+
+      - name: 打包 macOS 安装包
+        run: pnpm electron:build:mac
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+          ELECTRON_BUILDER_CACHE: /tmp/electron-builder-cache
+
+      - name: 上传 macOS 安装包
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac-dmg
+          path: release/*.dmg
+          retention-days: 30
+
+  build-win:
+    name: 构建 Windows (.exe)
+    runs-on: windows-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 安装 pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: 准备桌面版 package.json
+        shell: pwsh
+        run: Copy-Item package.desktop.json package.json
+
+      - name: 安装依赖
+        run: pnpm install --no-frozen-lockfile
+
+      - name: 构建 Web 资源
+        run: pnpm build:web
+        env:
+          NODE_ENV: production
+
+      - name: 打包 Windows 安装包
+        run: pnpm electron:build:win
+
+      - name: 上传 Windows 安装包
+        uses: actions/upload-artifact@v4
+        with:
+          name: win-installer
+          path: release/*.exe
+          retention-days: 30
+
+  release:
+    name: 创建 Release
+    needs: [build-mac, build-win]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: 下载 macOS 安装包
+        uses: actions/download-artifact@v4
+        with:
+          name: mac-dmg
+          path: release/mac
+
+      - name: 下载 Windows 安装包
+        uses: actions/download-artifact@v4
+        with:
+          name: win-installer
+          path: release/win
+
+      - name: 创建 GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: 奇妙奇遇游戏控制台 ${{ github.ref_name }}
+          body: |
+            ## 奇妙奇遇游戏控制台 ${{ github.ref_name }}
+
+            ### 下载安装包
+            - **macOS**: 下载 `.dmg` 文件，打开后将应用拖入 Applications 文件夹
+            - **Windows**: 下载 `.exe` 文件，双击运行安装向导
+
+            ### 功能特性
+            - 游戏控制台：管理游戏列表、游戏库、游戏列表组
+            - 展台：游戏展示与结算
+            - 轮盘：自定义抽奖轮盘
+            - 结算清单：周边/奖励结算管理
+            - 完全离线运行，数据本地存储
+          files: |
+            release/mac/*.dmg
+            release/win/*.exe
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
