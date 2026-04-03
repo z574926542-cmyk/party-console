@@ -2,9 +2,6 @@ appId: com.partyConsole.app
 productName: 奇妙奇遇游戏控制台
 copyright: Copyright © 2025
 
-# 不自动发布到 GitHub Release，由 GitHub Actions 手动上传 artifact
-publish: never
-
 # 应用图标（需要放在 electron/icons/ 目录下）
 # icon: electron/icons/icon
 

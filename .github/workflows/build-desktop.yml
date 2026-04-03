@@ -33,19 +33,12 @@ jobs:
       - name: 安装依赖
         run: pnpm install --no-frozen-lockfile
 
-      - name: 构建 Web 资源
-        run: pnpm build:web
-        env:
-          NODE_ENV: production
-
       - name: 打包 macOS 安装包
-        run: pnpm electron:build:mac
+        run: pnpm build:web && npx electron-builder --mac --config electron-builder.yml --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
           ELECTRON_BUILDER_CACHE: /tmp/electron-builder-cache
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          EP_DRAFT: false
-          EP_PRE_RELEASE: false
+          NODE_ENV: production
 
       - name: 上传 macOS 安装包
         uses: actions/upload-artifact@v4
@@ -76,15 +69,10 @@ jobs:
       - name: 安装依赖
         run: pnpm install --no-frozen-lockfile
 
-      - name: 构建 Web 资源
-        run: pnpm build:web
+      - name: 打包 Windows 安装包
+        run: pnpm build:web && npx electron-builder --win --config electron-builder.yml --publish never
         env:
           NODE_ENV: production
-
-      - name: 打包 Windows 安装包
-        run: pnpm electron:build:win
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: 上传 Windows 安装包
         uses: actions/upload-artifact@v4
