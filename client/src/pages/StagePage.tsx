@@ -375,7 +375,7 @@ function CountdownModal({ onClose }: { onClose: () => void }) {
 // ============================================================
 // 主页面
 // ============================================================
-type ModalType = null | 'pick' | 'group' | 'countdown' | { type: 'settle'; settlement: 'winner' | 'loser' };
+type ModalType = null | 'pick' | 'group' | 'countdown' | { type: 'settle'; settlement: 'winner' | 'loser' } | { type: 'lightbox'; src: string; name: string };
 
 export default function StagePage() {
   const { state, dispatch } = useApp();
@@ -383,6 +383,8 @@ export default function StagePage() {
   const [activeModal, setActiveModal] = useState<ModalType>(null);
   const [showNames, setShowNames] = useState(state.stageShowGameNames);
   const [settledItems, setSettledItems] = useState<Set<string>>(new Set());
+
+  const openLightbox = (src: string, name: string) => setActiveModal({ type: 'lightbox', src, name });
 
   const gameList = state.currentGameList;
   const currentItem = gameList.find(item => item.id === state.stageCurrentGameId) || gameList[0] || null;
@@ -628,9 +630,17 @@ export default function StagePage() {
                 <div className="section-label mb-3">周边奖励</div>
                 <div className="flex gap-4 flex-wrap">
                   {currentGame.settlementImages.map(img => (
-                    <div key={img.id} className="flex flex-col items-center gap-2">
-                      <img src={img.dataUrl} alt={img.name} className="w-24 h-24 rounded-2xl object-cover"
-                        style={{ boxShadow: '0 4px 16px rgba(100,80,180,0.15)' }} />
+                    <div key={img.id} className="flex flex-col items-center gap-2 cursor-pointer group"
+                      onClick={() => img.dataUrl && openLightbox(img.dataUrl, img.name)}
+                      title="点击放大预览">
+                      <div className="relative">
+                        <img src={img.dataUrl} alt={img.name} className="w-24 h-24 rounded-2xl object-cover transition-transform group-hover:scale-105"
+                          style={{ boxShadow: '0 4px 16px rgba(100,80,180,0.15)' }} />
+                        <div className="absolute inset-0 rounded-2xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          style={{ background: 'rgba(0,0,0,0.35)' }}>
+                          <span className="text-white text-xl">&#128269;</span>
+                        </div>
+                      </div>
                       <span className="text-xs font-semibold" style={{ color: 'oklch(0.40 0.04 280)' }}>{img.name}</span>
                     </div>
                   ))}
@@ -688,6 +698,44 @@ export default function StagePage() {
           onConfirm={(nums) => handleSettle(activeModal.settlement, nums)}
           onClose={() => setActiveModal(null)}
         />
+      )}
+      {/* 周边奖励图片灯箱放大预览 */}
+      {activeModal !== null && typeof activeModal === 'object' && activeModal.type === 'lightbox' && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ background: 'rgba(0,0,0,0.82)', backdropFilter: 'blur(8px)' }}
+          onClick={() => setActiveModal(null)}>
+          <div className="relative flex flex-col items-center gap-4 max-w-[90vw] max-h-[90vh]"
+            onClick={e => e.stopPropagation()}>
+            {/* 关闭按鈕 */}
+            <button
+              onClick={() => setActiveModal(null)}
+              className="absolute -top-3 -right-3 z-10 w-9 h-9 rounded-full flex items-center justify-center font-bold text-lg shadow-lg"
+              style={{ background: 'rgba(255,255,255,0.15)', color: 'white', border: '1.5px solid rgba(255,255,255,0.25)' }}>
+              ×
+            </button>
+            {/* 大图 */}
+            <img
+              src={activeModal.src}
+              alt={activeModal.name}
+              className="rounded-3xl object-contain"
+              style={{
+                maxWidth: '80vw',
+                maxHeight: '78vh',
+                boxShadow: '0 24px 80px rgba(0,0,0,0.6)',
+                border: '2px solid rgba(255,255,255,0.12)',
+              }}
+            />
+            {/* 周边名称 */}
+            {activeModal.name && (
+              <div className="px-5 py-2 rounded-2xl text-base font-black text-white"
+                style={{ background: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.18)' }}>
+                {activeModal.name}
+              </div>
+            )}
+            <div className="text-xs" style={{ color: 'rgba(255,255,255,0.45)' }}>点击任意处关闭</div>
+          </div>
+        </div>
       )}
     </div>
   );
