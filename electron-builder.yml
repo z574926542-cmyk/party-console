@@ -1,15 +1,14 @@
-appId: com.partyConsole.app
+appId: com.partyconsole.app
 productName: PartyConsole
-copyright: Copyright © 2025
+copyright: Copyright © 2025 PartyConsole
 
-# 应用图标
+# App icon - electron-builder auto-selects .icns for mac, .ico for win
 icon: electron/icons/icon
 
 directories:
-  buildResources: electron/icons
   output: release
 
-# 打包文件范围
+# Files to include in the app package
 files:
   - dist/public/**
   - electron/main.js
@@ -21,31 +20,34 @@ files:
   - "!shared/**"
   - "!.manus-logs/**"
   - "!patches/**"
+  - "!*.md"
+  - "!*.json"
+  - "electron/package.json"
 
-# 额外资源
+# Entry point
 extraMetadata:
   main: electron/main.js
 
-# macOS 配置
+# macOS
 mac:
   category: public.app-category.entertainment
+  darkModeSupport: true
   target:
     - target: dmg
       arch:
         - x64
         - arm64
-  darkModeSupport: true
 
 dmg:
   title: PartyConsole
+  writeUpdateInfo: false
 
-# Windows 配置
+# Windows
 win:
   target:
     - target: nsis
       arch:
         - x64
-  publisherName: PartyConsole
 
 nsis:
   oneClick: false
@@ -53,12 +55,3 @@ nsis:
   createDesktopShortcut: true
   createStartMenuShortcut: true
   shortcutName: PartyConsole
-  installerLanguages:
-    - zh_CN
-  language: 2052
-
-# Linux 配置（可选）
-linux:
-  target:
-    - AppImage
-  category: Game
