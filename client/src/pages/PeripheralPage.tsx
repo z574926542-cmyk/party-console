@@ -46,6 +46,7 @@ export default function PeripheralPage() {
   const [filter, setFilter] = useState<FilterCategory>('all');
   const [showCompleted, setShowCompleted] = useState(true);
   const [search, setSearch] = useState('');
+  const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
 
   const records = state.peripheralRecords ?? [];
 
@@ -102,6 +103,12 @@ export default function PeripheralPage() {
     const completedIds = records.filter(r => r.completed).map(r => r.id);
     completedIds.forEach(id => dispatch({ type: 'REMOVE_PERIPHERAL', payload: id }));
     toast.success(`已清除 ${completedIds.length} 条已完成记录`);
+  };
+
+  const handleClearAll = () => {
+    dispatch({ type: 'CLEAR_PERIPHERAL_RECORDS' });
+    setShowClearAllConfirm(false);
+    toast.success('结算列表已清空');
   };
 
   const SOURCE_LABELS: Record<string, string> = {
@@ -163,6 +170,30 @@ export default function PeripheralPage() {
                 style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.2)' }}>
                 清除已完成
               </button>
+            )}
+            {records.length > 0 && (
+              !showClearAllConfirm ? (
+                <button onClick={() => setShowClearAllConfirm(true)}
+                  className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all"
+                  style={{ background: 'rgba(239,68,68,0.08)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.15)' }}>
+                  🗑 清空列表
+                </button>
+              ) : (
+                <div className="flex items-center gap-1.5 px-2 py-1 rounded-xl"
+                  style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)' }}>
+                  <span className="text-xs font-semibold" style={{ color: '#ef4444' }}>确认清空？</span>
+                  <button onClick={handleClearAll}
+                    className="px-2 py-0.5 rounded-lg text-xs font-bold text-white"
+                    style={{ background: 'linear-gradient(135deg,#ef4444,#b91c1c)' }}>
+                    确认
+                  </button>
+                  <button onClick={() => setShowClearAllConfirm(false)}
+                    className="px-2 py-0.5 rounded-lg text-xs font-bold"
+                    style={{ background: 'rgba(200,180,240,0.2)', color: 'oklch(0.45 0.06 280)' }}>
+                    取消
+                  </button>
+                </div>
+              )
             )}
             <button onClick={() => handleAdd('reward')}
               className="px-3 py-1.5 rounded-xl text-xs font-bold text-white transition-all"

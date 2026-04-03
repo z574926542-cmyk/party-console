@@ -58,7 +58,9 @@ type Action =
   | { type: 'ADD_PERIPHERAL'; payload: { playerNumber: number; source: PeripheralRecord['source']; options?: any } }
   | { type: 'UPDATE_PERIPHERAL'; payload: { id: string; updates: Partial<PeripheralRecord> } }
   | { type: 'REMOVE_PERIPHERAL'; payload: string }
-  | { type: 'ADD_PERIPHERAL_RECORD'; payload: PeripheralRecord };
+  | { type: 'ADD_PERIPHERAL_RECORD'; payload: PeripheralRecord }
+  | { type: 'CLEAR_PERIPHERAL_RECORDS' }
+  | { type: 'ADD_GAME_TO_LIBRARY_FORCE'; payload: Game };  // 强制覆盖同名游戏
 
 function reducer(state: AppState, action: Action): AppState {
   let newState: AppState;
@@ -151,6 +153,22 @@ function reducer(state: AppState, action: Action): AppState {
     case 'REMOVE_PERIPHERAL':
       newState = removePeripheralRecord(state, action.payload);
       break;
+    case 'CLEAR_PERIPHERAL_RECORDS':
+      newState = { ...state, peripheralRecords: [] };
+      break;
+    case 'ADD_GAME_TO_LIBRARY_FORCE': {
+      // 强制覆盖同名游戏（用于库管理页重复名称确认后覆盖）
+      const game = action.payload;
+      const exists = state.gameLibrary.some(g => g.id === game.id);
+      if (exists) {
+        newState = { ...state, gameLibrary: state.gameLibrary.map(g => g.id === game.id ? { ...game, updatedAt: Date.now() } : g) };
+      } else {
+        // 删除同名的旧条目，再添加新的
+        const filtered = state.gameLibrary.filter(g => g.name !== game.name);
+        newState = { ...state, gameLibrary: [...filtered, { ...game, updatedAt: Date.now() }] };
+      }
+      break;
+    }
     default:
       return state;
   }

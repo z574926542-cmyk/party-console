@@ -639,7 +639,6 @@ export default function ConsolePage() {
   const [, navigate] = useLocation();
   const [activeTab, setActiveTab] = useState<ConsoleTab>('games');
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
-  const [showLibrary, setShowLibrary] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
@@ -680,8 +679,15 @@ export default function ConsolePage() {
   };
 
   const handleSaveToLibrary = (game: Game) => {
-    dispatch({ type: 'ADD_GAME_TO_LIBRARY', payload: game });
-    toast.success(`「${game.name}」已入库`);
+    const duplicate = state.gameLibrary.find(g => g.name === game.name && g.id !== game.id);
+    if (duplicate) {
+      // 同名已存在：强制覆盖（控制台入库时直接覆盖）
+      dispatch({ type: 'ADD_GAME_TO_LIBRARY_FORCE', payload: game });
+      toast.success(`「${game.name}」已更新入库`);
+    } else {
+      dispatch({ type: 'ADD_GAME_TO_LIBRARY', payload: game });
+      toast.success(`「${game.name}」已入库`);
+    }
   };
 
   const handleLoadAllToStage = () => {
@@ -734,7 +740,7 @@ export default function ConsolePage() {
             <div className="flex items-center gap-2 px-4 py-2.5 flex-shrink-0" style={{ borderBottom: '1px solid rgba(200,180,240,0.15)' }}>
               <span className="text-xs font-semibold" style={{ color: 'oklch(0.55 0.04 280)' }}>{state.currentGameList.length} 个游戏</span>
               <div className="ml-auto flex items-center gap-1.5">
-                <button onClick={() => setShowLibrary(true)} className="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all" style={{ background: 'rgba(200,180,240,0.2)', color: 'oklch(0.50 0.06 280)' }}>从库添加</button>
+                <button onClick={() => navigate('/library')} className="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all" style={{ background: 'rgba(200,180,240,0.2)', color: 'oklch(0.50 0.06 280)' }}>📚 库管理</button>
                 <button onClick={handleNewGame} className="px-2.5 py-1.5 rounded-lg text-xs font-bold text-white transition-all" style={{ background: 'linear-gradient(135deg,#ec407a,#7c4dff)', boxShadow: '0 2px 8px rgba(124,77,255,0.25)' }}>+ 新建</button>
               </div>
             </div>
@@ -817,8 +823,7 @@ export default function ConsolePage() {
         </div>
       )}
 
-      {/* 游戏库弹窗 */}
-      {showLibrary && <LibraryModal library={state.gameLibrary} onAdd={handleAddFromLibrary} onClose={() => setShowLibrary(false)} />}
+
     </div>
   );
 }

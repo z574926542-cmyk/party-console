@@ -6,6 +6,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { nanoid } from 'nanoid';
 import { toast } from 'sonner';
+import { exportSingleWheel, parseSingleWheelJSON } from '@/store';
 import type { Wheel, WheelOption, WheelHistoryEntry, PlayerIdentity } from '@/types';
 
 // 三个默认轮盘 ID（与 store/index.ts 保持一致）
@@ -367,6 +368,37 @@ export default function WheelPage() {
     dispatch({ type: 'REMOVE_WHEEL', payload: activeWheel.id });
     setActiveWheelId(DEFAULT_IDS[0]);
   };
+
+  // 导出当前轮盘为 JSON
+  const handleExportWheel = (wheel: Wheel) => {
+    const json = exportSingleWheel(wheel);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${wheel.name.replace(/[/\\?%*:|"<>]/g, '_')}.wheel.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`「${wheel.name}」已导出为JSON模板`);
+  };
+
+  // 上传 JSON 导入轮盘
+  const wheelImportRef = useRef<HTMLInputElement>(null);
+  const handleImportWheelFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const json = ev.target?.result as string;
+      const wheel = parseSingleWheelJSON(json);
+      if (!wheel) { toast.error('文件格式不正确，无法解析轮盘数据'); return; }
+      dispatch({ type: 'ADD_WHEEL', payload: wheel });
+      setActiveWheelId(wheel.id);
+      toast.success(`「${wheel.name}」已导入`);
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
   const handleSaveName = () => {
     if (!activeWheel || isDefaultWheel) return;
     if (nameInput.trim()) dispatch({ type: 'UPDATE_WHEEL', payload: { ...activeWheel, name: nameInput.trim(), updatedAt: Date.now() } });
@@ -390,10 +422,27 @@ export default function WheelPage() {
       {showWheelList && (
         <div className="w-52 flex-shrink-0 flex flex-col overflow-hidden"
           style={{ background: 'rgba(255,255,255,0.55)', backdropFilter: 'blur(16px)', borderRight: '1px solid rgba(200,180,240,0.25)' }}>
-          <div className="px-4 py-3 flex-shrink-0 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(200,180,240,0.2)' }}>
-            <span className="text-xs font-bold" style={{ color: 'oklch(0.50 0.06 310)' }}>轮盘列表</span>
-            <button onClick={handleAddWheel} className="px-2 py-1 rounded-lg text-xs font-bold"
-              style={{ background: 'linear-gradient(135deg,#ec407a,#7c4dff)', color: 'white' }}>+ 新建</button>
+          <div className="px-4 py-3 flex-shrink-0 flex flex-col gap-2" style={{ borderBottom: '1px solid rgba(200,180,240,0.2)' }}>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold" style={{ color: 'oklch(0.50 0.06 310)' }}>轮盘列表</span>
+              <button onClick={handleAddWheel} className="px-2 py-1 rounded-lg text-xs font-bold"
+                style={{ background: 'linear-gradient(135deg,#ec407a,#7c4dff)', color: 'white' }}>+ 新建</button>
+            </div>
+            <div className="flex gap-1.5">
+              <button onClick={() => activeWheel && handleExportWheel(activeWheel)}
+                className="flex-1 py-1 rounded-lg text-xs font-bold transition-all"
+                style={{ background: 'rgba(100,116,139,0.1)', color: 'oklch(0.45 0.04 280)', border: '1px solid rgba(200,180,240,0.25)' }}
+                title="导出当前轮盘为JSON">
+                ↓ 导出
+              </button>
+              <button onClick={() => wheelImportRef.current?.click()}
+                className="flex-1 py-1 rounded-lg text-xs font-bold transition-all"
+                style={{ background: 'rgba(100,116,139,0.1)', color: 'oklch(0.45 0.04 280)', border: '1px solid rgba(200,180,240,0.25)' }}
+                title="上传JSON导入轮盘">
+                ↑ 导入
+              </button>
+              <input ref={wheelImportRef} type="file" accept=".json,application/json" className="hidden" onChange={handleImportWheelFile} />
+            </div>
           </div>
           <div className="flex-1 overflow-y-auto p-3 space-y-1.5">
             <div className="text-xs font-bold px-1 mb-1" style={{ color: 'oklch(0.60 0.06 280)' }}>默认轮盘</div>

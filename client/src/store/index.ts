@@ -363,6 +363,80 @@ export function exportGameLibrary(state: AppState): string {
   return JSON.stringify({ gameLibrary: state.gameLibrary, tags: state.tags }, null, 2);
 }
 
+// 导出单个游戏为 JSON模板（包含周边图片 dataUrl）
+export function exportSingleGame(game: Game): string {
+  return JSON.stringify({ version: 1, type: 'game-template', game }, null, 2);
+}
+
+// 解析单个游戏 JSON模板
+export function parseSingleGameJSON(json: string): Game | null {
+  try {
+    const data = JSON.parse(json);
+    // 支持两种格式：{ game: ... } 或直接是 Game 对象
+    const raw = data.game || data;
+    if (!raw || !raw.name) return null;
+    return {
+      id: raw.id || nanoid(),
+      name: raw.name || '导入游戏',
+      rules: raw.rules || '',
+      winnerSettlement: raw.winnerSettlement || '',
+      loserSettlement: raw.loserSettlement || '',
+      settlementImages: Array.isArray(raw.settlementImages)
+        ? raw.settlementImages.map((img: any) => ({
+            id: img.id || nanoid(),
+            name: img.name || '',
+            dataUrl: img.dataUrl,
+            imageId: img.imageId,
+          }))
+        : [],
+      tools: Array.isArray(raw.tools) ? raw.tools : [],
+      tags: Array.isArray(raw.tags) ? raw.tags : [],
+      notes: raw.notes || '',
+      createdAt: raw.createdAt || Date.now(),
+      updatedAt: Date.now(),
+    };
+  } catch {
+    return null;
+  }
+}
+
+// 解析单个轮盘 JSON模板
+export function parseSingleWheelJSON(json: string): Wheel | null {
+  try {
+    const data = JSON.parse(json);
+    const raw = data.wheel || data;
+    if (!raw || !raw.name) return null;
+    return {
+      id: nanoid(), // 导入时分配新 ID 避免冲突
+      name: raw.name || '导入轮盘',
+      options: Array.isArray(raw.options)
+        ? raw.options.map((o: any) => ({
+            id: nanoid(),
+            label: o.label || '',
+            weight: typeof o.weight === 'number' ? o.weight : 1,
+            color: o.color || '#6366f1',
+            isPeripheral: Boolean(o.isPeripheral),
+            isPenalty: Boolean(o.isPenalty),
+            imageDataUrl: o.imageDataUrl,
+            notes: o.notes || '',
+          }))
+        : [],
+      history: [],
+      isDefault: false,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+  } catch {
+    return null;
+  }
+}
+
+// 导出单个轮盘为 JSON模板
+export function exportSingleWheel(wheel: Wheel): string {
+  // 轮盘选项图片包含 imageDataUrl（运行时缓存）
+  return JSON.stringify({ version: 1, type: 'wheel-template', wheel }, null, 2);
+}
+
 export function exportWheels(state: AppState): string {
   return JSON.stringify({ wheels: state.wheels }, null, 2);
 }
