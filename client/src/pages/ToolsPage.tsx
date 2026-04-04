@@ -102,11 +102,16 @@ function RandomNumberTool() {
   const [results, setResults] = useState<number[]>([]);
   const [animating, setAnimating] = useState(false);
   const [displayNums, setDisplayNums] = useState<number[]>([]);
-  const [filterGender, setFilterGender] = useState<'all' | 'male' | 'female'>('all');
-  const [filterSocial, setFilterSocial] = useState<'all' | 'introvert' | 'extrovert'>('all');
+  const [genderSet, setGenderSet] = useState<Set<string>>(new Set());
+  const [socialSet, setSocialSet] = useState<Set<string>>(new Set());
   const [usePlayerFilter, setUsePlayerFilter] = useState(false);
   const animRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const accent = 'oklch(0.60 0.20 285)';
+  const toggleSet = (set: Set<string>, val: string, setter: (s: Set<string>) => void) => {
+    const next = new Set(Array.from(set));
+    if (next.has(val)) next.delete(val); else next.add(val);
+    setter(next);
+  };
 
   const availablePool = useMemo(() => {
     if (!usePlayerFilter) {
@@ -115,11 +120,11 @@ function RandomNumberTool() {
       return excludeUsed ? pool.filter(n => !usedNumbers.includes(n)) : pool;
     }
     let players = state.players;
-    if (filterGender !== 'all') players = players.filter(p => p.gender === filterGender);
-    if (filterSocial !== 'all') players = players.filter(p => p.socialType === filterSocial);
+    if (genderSet.size > 0) players = players.filter(p => genderSet.has(p.gender));
+    if (socialSet.size > 0) players = players.filter(p => socialSet.has(p.socialType));
     const pool = players.map(p => p.number);
     return excludeUsed ? pool.filter(n => !usedNumbers.includes(n)) : pool;
-  }, [usePlayerFilter, min, max, excludeUsed, usedNumbers, state.players, filterGender, filterSocial]);
+  }, [usePlayerFilter, min, max, excludeUsed, usedNumbers, state.players, genderSet, socialSet]);
 
   const handleGenerate = () => {
     if (availablePool.length === 0) { toast.error('没有可用的号码'); return; }
@@ -144,7 +149,7 @@ function RandomNumberTool() {
   const handleReset = () => {
     setMin(1); setMax(state.players.length || 30); setCount(1);
     setExcludeUsed(false); setUsedNumbers([]); setResults([]); setDisplayNums([]);
-    setFilterGender('all'); setFilterSocial('all'); setUsePlayerFilter(false);
+    setGenderSet(new Set()); setSocialSet(new Set()); setUsePlayerFilter(false);
     toast.success('已复原默认设置');
   };
 
@@ -206,18 +211,14 @@ function RandomNumberTool() {
       {usePlayerFilter ? (
         <div className="space-y-2 px-3 py-3 rounded-xl" style={{ background: 'oklch(0.155 0.022 270)', border: '1px solid oklch(0.22 0.022 270)' }}>
           <div className="flex gap-1.5">
-            {(['all', 'male', 'female'] as const).map(g => (
-              <button key={g} onClick={() => setFilterGender(g)} className="flex-1 text-xs py-1.5 rounded-xl font-semibold transition-all" style={filterBtnStyle(filterGender === g, accent)}>
-                {g === 'all' ? '不限' : g === 'male' ? '♂ 男' : '♀ 女'}
-              </button>
-            ))}
+            <button onClick={() => toggleSet(genderSet, 'male', setGenderSet)} className="flex-1 text-xs py-1.5 rounded-xl font-semibold transition-all" style={filterBtnStyle(genderSet.has('male'), accent)}>♂ 男</button>
+            <button onClick={() => toggleSet(genderSet, 'female', setGenderSet)} className="flex-1 text-xs py-1.5 rounded-xl font-semibold transition-all" style={filterBtnStyle(genderSet.has('female'), accent)}>♀ 女</button>
+            {genderSet.size > 0 && <button onClick={() => setGenderSet(new Set())} className="text-xs px-2 py-1.5 rounded-xl font-semibold transition-all" style={filterBtnStyle(false, accent)}>清除</button>}
           </div>
           <div className="flex gap-1.5">
-            {(['all', 'introvert', 'extrovert'] as const).map(s => (
-              <button key={s} onClick={() => setFilterSocial(s)} className="flex-1 text-xs py-1.5 rounded-xl font-semibold transition-all" style={filterBtnStyle(filterSocial === s, accent)}>
-                {s === 'all' ? '不限' : s === 'introvert' ? '🌙 社恐' : '☀️ 社牛'}
-              </button>
-            ))}
+            <button onClick={() => toggleSet(socialSet, 'introvert', setSocialSet)} className="flex-1 text-xs py-1.5 rounded-xl font-semibold transition-all" style={filterBtnStyle(socialSet.has('introvert'), accent)}>🌙 社恐</button>
+            <button onClick={() => toggleSet(socialSet, 'extrovert', setSocialSet)} className="flex-1 text-xs py-1.5 rounded-xl font-semibold transition-all" style={filterBtnStyle(socialSet.has('extrovert'), accent)}>☀️ 社牛</button>
+            {socialSet.size > 0 && <button onClick={() => setSocialSet(new Set())} className="text-xs px-2 py-1.5 rounded-xl font-semibold transition-all" style={filterBtnStyle(false, accent)}>清除</button>}
           </div>
           <div className="text-xs text-center" style={{ color: 'oklch(0.45 0.015 270)' }}>可用号码池：{availablePool.length} 个</div>
         </div>
@@ -332,8 +333,8 @@ function RandomNumberTool() {
 // ============================================================
 function RandomPickTool() {
   const { state } = useApp();
-  const [filterGender, setFilterGender] = useState<'all' | 'male' | 'female'>('all');
-  const [filterSocial, setFilterSocial] = useState<'all' | 'introvert' | 'extrovert'>('all');
+  const [genderSet, setGenderSet] = useState<Set<string>>(new Set());
+  const [socialSet, setSocialSet] = useState<Set<string>>(new Set());
   const [pickCount, setPickCount] = useState(1);
   const [excludePicked, setExcludePicked] = useState(true);
   const [pickedHistory, setPickedHistory] = useState<number[]>([]);
@@ -360,8 +361,8 @@ function RandomPickTool() {
 
   const pool = useMemo(() => {
     let players = [...state.players];
-    if (filterGender !== 'all') players = players.filter(p => p.gender === filterGender);
-    if (filterSocial !== 'all') players = players.filter(p => p.socialType === filterSocial);
+    if (genderSet.size > 0) players = players.filter(p => genderSet.has(p.gender));
+    if (socialSet.size > 0) players = players.filter(p => socialSet.has(p.socialType));
     if (excludePicked) players = players.filter(p => !pickedHistory.includes(p.number));
     // 号码筛选
     if (excludeSet.size > 0) players = players.filter(p => !excludeSet.has(p.number));
@@ -369,7 +370,7 @@ function RandomPickTool() {
     if (!isNaN(min)) players = players.filter(p => p.number >= min);
     if (!isNaN(max)) players = players.filter(p => p.number <= max);
     return players;
-  }, [state.players, filterGender, filterSocial, excludePicked, pickedHistory, excludeSet, rangeMin, rangeMax]);
+  }, [state.players, genderSet, socialSet, excludePicked, pickedHistory, excludeSet, rangeMin, rangeMax]);
 
   const handlePick = () => {
     if (pool.length === 0) { toast.error('没有可选的玩家'); return; }
@@ -450,18 +451,14 @@ function RandomPickTool() {
       {/* 过滤 */}
       <div className="space-y-2">
         <div className="flex gap-1.5">
-          {(['all', 'male', 'female'] as const).map(g => (
-            <button key={g} onClick={() => setFilterGender(g)} className="flex-1 text-xs py-1.5 rounded-xl font-semibold transition-all" style={filterBtnStyle(filterGender === g, accent)}>
-              {g === 'all' ? '不限' : g === 'male' ? '♂ 男' : '♀ 女'}
-            </button>
-          ))}
+          <button onClick={() => { const n = new Set(Array.from(genderSet)); n.has('male') ? n.delete('male') : n.add('male'); setGenderSet(n); }} className="flex-1 text-xs py-1.5 rounded-xl font-semibold transition-all" style={filterBtnStyle(genderSet.has('male'), accent)}>♂ 男</button>
+          <button onClick={() => { const n = new Set(Array.from(genderSet)); n.has('female') ? n.delete('female') : n.add('female'); setGenderSet(n); }} className="flex-1 text-xs py-1.5 rounded-xl font-semibold transition-all" style={filterBtnStyle(genderSet.has('female'), accent)}>♀ 女</button>
+          {genderSet.size > 0 && <button onClick={() => setGenderSet(new Set())} className="text-xs px-2 py-1.5 rounded-xl font-semibold transition-all" style={filterBtnStyle(false, accent)}>清除</button>}
         </div>
         <div className="flex gap-1.5">
-          {(['all', 'introvert', 'extrovert'] as const).map(s => (
-            <button key={s} onClick={() => setFilterSocial(s)} className="flex-1 text-xs py-1.5 rounded-xl font-semibold transition-all" style={filterBtnStyle(filterSocial === s, accent)}>
-              {s === 'all' ? '不限' : s === 'introvert' ? '🌙 社恐' : '☀️ 社牛'}
-            </button>
-          ))}
+          <button onClick={() => { const n = new Set(Array.from(socialSet)); n.has('introvert') ? n.delete('introvert') : n.add('introvert'); setSocialSet(n); }} className="flex-1 text-xs py-1.5 rounded-xl font-semibold transition-all" style={filterBtnStyle(socialSet.has('introvert'), accent)}>🌙 社恐</button>
+          <button onClick={() => { const n = new Set(Array.from(socialSet)); n.has('extrovert') ? n.delete('extrovert') : n.add('extrovert'); setSocialSet(n); }} className="flex-1 text-xs py-1.5 rounded-xl font-semibold transition-all" style={filterBtnStyle(socialSet.has('extrovert'), accent)}>☀️ 社牛</button>
+          {socialSet.size > 0 && <button onClick={() => setSocialSet(new Set())} className="text-xs px-2 py-1.5 rounded-xl font-semibold transition-all" style={filterBtnStyle(false, accent)}>清除</button>}
         </div>
         {/* 号码筛选 */}
         <div className="flex flex-col gap-1.5 pt-1">
@@ -558,9 +555,10 @@ function RandomPickTool() {
 function RandomGroupTool() {
   const { state } = useApp();
   const [groupCount, setGroupCount] = useState(2);
-  const [filterGender, setFilterGender] = useState<'all' | 'male' | 'female'>('all');
-  const [filterSocial, setFilterSocial] = useState<'all' | 'introvert' | 'extrovert'>('all');
+  const [genderSet, setGenderSet] = useState<Set<string>>(new Set());
+  const [socialSet, setSocialSet] = useState<Set<string>>(new Set());
   const [balanceGender, setBalanceGender] = useState(false);
+  const [balanceSocial, setBalanceSocial] = useState(false);
   const [groups, setGroups] = useState<PlayerIdentity[][]>([]);
   const [animating, setAnimating] = useState(false);
   const [showIdentity, setShowIdentity] = useState(() => {
@@ -575,10 +573,10 @@ function RandomGroupTool() {
 
   const pool = useMemo(() => {
     let players = [...state.players];
-    if (filterGender !== 'all') players = players.filter(p => p.gender === filterGender);
-    if (filterSocial !== 'all') players = players.filter(p => p.socialType === filterSocial);
+    if (genderSet.size > 0) players = players.filter(p => genderSet.has(p.gender));
+    if (socialSet.size > 0) players = players.filter(p => socialSet.has(p.socialType));
     return players;
-  }, [state.players, filterGender, filterSocial]);
+  }, [state.players, genderSet, socialSet]);
 
   const GROUP_ACCENT_COLORS = [
     'oklch(0.60 0.20 285)', 'oklch(0.62 0.22 10)', 'oklch(0.78 0.16 52)',
@@ -591,20 +589,53 @@ function RandomGroupTool() {
     if (groupCount < 2) { toast.error('至少需要分成 2 组'); return; }
     setAnimating(true);
     setTimeout(() => {
-      let players = [...pool];
-      if (balanceGender) {
-        const males = players.filter(p => p.gender === 'male').sort(() => Math.random() - 0.5);
-        const females = players.filter(p => p.gender === 'female').sort(() => Math.random() - 0.5);
-        const others = players.filter(p => p.gender === 'unknown').sort(() => Math.random() - 0.5);
+      let players = [...pool].sort(() => Math.random() - 0.5);
+      if (balanceGender && balanceSocial) {
+        const interleave = (arr: typeof players) => {
+          const ext = arr.filter(p => p.socialType === 'extrovert');
+          const intr = arr.filter(p => p.socialType === 'introvert');
+          const oth = arr.filter(p => p.socialType === 'unknown');
+          const res: typeof players = [];
+          const m = Math.max(ext.length, intr.length, oth.length);
+          for (let i = 0; i < m; i++) {
+            if (ext[i]) res.push(ext[i]);
+            if (intr[i]) res.push(intr[i]);
+            if (oth[i]) res.push(oth[i]);
+          }
+          return res;
+        };
+        const males = interleave(players.filter(p => p.gender === 'male'));
+        const females = interleave(players.filter(p => p.gender === 'female'));
+        const others = interleave(players.filter(p => p.gender === 'unknown'));
         players = [];
         const maxLen = Math.max(males.length, females.length, others.length);
         for (let i = 0; i < maxLen; i++) {
-          if (i < males.length) players.push(males[i]);
-          if (i < females.length) players.push(females[i]);
-          if (i < others.length) players.push(others[i]);
+          if (males[i]) players.push(males[i]);
+          if (females[i]) players.push(females[i]);
+          if (others[i]) players.push(others[i]);
         }
-      } else {
-        players = players.sort(() => Math.random() - 0.5);
+      } else if (balanceGender) {
+        const males = players.filter(p => p.gender === 'male');
+        const females = players.filter(p => p.gender === 'female');
+        const others = players.filter(p => p.gender === 'unknown');
+        players = [];
+        const maxLen = Math.max(males.length, females.length, others.length);
+        for (let i = 0; i < maxLen; i++) {
+          if (males[i]) players.push(males[i]);
+          if (females[i]) players.push(females[i]);
+          if (others[i]) players.push(others[i]);
+        }
+      } else if (balanceSocial) {
+        const extroverts = players.filter(p => p.socialType === 'extrovert');
+        const introverts = players.filter(p => p.socialType === 'introvert');
+        const others = players.filter(p => p.socialType === 'unknown');
+        players = [];
+        const maxLen = Math.max(extroverts.length, introverts.length, others.length);
+        for (let i = 0; i < maxLen; i++) {
+          if (extroverts[i]) players.push(extroverts[i]);
+          if (introverts[i]) players.push(introverts[i]);
+          if (others[i]) players.push(others[i]);
+        }
       }
       const result: PlayerIdentity[][] = Array.from({ length: groupCount }, () => []);
       players.forEach((p, i) => result[i % groupCount].push(p));
@@ -617,18 +648,14 @@ function RandomGroupTool() {
     <div className="flex flex-col gap-4 h-full overflow-y-auto">
       <div className="space-y-2">
         <div className="flex gap-1.5">
-          {(['all', 'male', 'female'] as const).map(g => (
-            <button key={g} onClick={() => setFilterGender(g)} className="flex-1 text-xs py-1.5 rounded-xl font-semibold transition-all" style={filterBtnStyle(filterGender === g, accent)}>
-              {g === 'all' ? '不限' : g === 'male' ? '♂ 男' : '♀ 女'}
-            </button>
-          ))}
+          <button onClick={() => { const n = new Set(Array.from(genderSet)); n.has('male') ? n.delete('male') : n.add('male'); setGenderSet(n); }} className="flex-1 text-xs py-1.5 rounded-xl font-semibold transition-all" style={filterBtnStyle(genderSet.has('male'), accent)}>♂ 男</button>
+          <button onClick={() => { const n = new Set(Array.from(genderSet)); n.has('female') ? n.delete('female') : n.add('female'); setGenderSet(n); }} className="flex-1 text-xs py-1.5 rounded-xl font-semibold transition-all" style={filterBtnStyle(genderSet.has('female'), accent)}>♀ 女</button>
+          {genderSet.size > 0 && <button onClick={() => setGenderSet(new Set())} className="text-xs px-2 py-1.5 rounded-xl font-semibold transition-all" style={filterBtnStyle(false, accent)}>清除</button>}
         </div>
         <div className="flex gap-1.5">
-          {(['all', 'introvert', 'extrovert'] as const).map(s => (
-            <button key={s} onClick={() => setFilterSocial(s)} className="flex-1 text-xs py-1.5 rounded-xl font-semibold transition-all" style={filterBtnStyle(filterSocial === s, accent)}>
-              {s === 'all' ? '不限' : s === 'introvert' ? '🌙 社恐' : '☀️ 社牛'}
-            </button>
-          ))}
+          <button onClick={() => { const n = new Set(Array.from(socialSet)); n.has('introvert') ? n.delete('introvert') : n.add('introvert'); setSocialSet(n); }} className="flex-1 text-xs py-1.5 rounded-xl font-semibold transition-all" style={filterBtnStyle(socialSet.has('introvert'), accent)}>🌙 社恐</button>
+          <button onClick={() => { const n = new Set(Array.from(socialSet)); n.has('extrovert') ? n.delete('extrovert') : n.add('extrovert'); setSocialSet(n); }} className="flex-1 text-xs py-1.5 rounded-xl font-semibold transition-all" style={filterBtnStyle(socialSet.has('extrovert'), accent)}>☀️ 社牛</button>
+          {socialSet.size > 0 && <button onClick={() => setSocialSet(new Set())} className="text-xs px-2 py-1.5 rounded-xl font-semibold transition-all" style={filterBtnStyle(false, accent)}>清除</button>}
         </div>
       </div>
 
@@ -649,6 +676,16 @@ function RandomGroupTool() {
         <span className="text-sm font-semibold" style={{ color: 'oklch(0.82 0.008 270)' }}>性别均衡分组</span>
         <div className="w-9 h-5 rounded-full transition-all relative" style={{ background: balanceGender ? 'oklch(0.78 0.16 52 / 0.4)' : 'oklch(0.22 0.022 270)', border: `1px solid ${balanceGender ? accent : 'oklch(0.28 0.022 270)'}` }}>
           <div className="absolute top-0.5 w-4 h-4 rounded-full transition-all" style={{ background: balanceGender ? accent : 'oklch(0.40 0.015 270)', left: balanceGender ? '18px' : '2px' }} />
+        </div>
+      </div>
+      <div
+        className="flex items-center justify-between px-3 py-2.5 rounded-xl cursor-pointer"
+        style={{ background: 'oklch(0.155 0.022 270)', border: '1px solid oklch(0.22 0.022 270)' }}
+        onClick={() => setBalanceSocial(v => !v)}
+      >
+        <span className="text-sm font-semibold" style={{ color: 'oklch(0.82 0.008 270)' }}>社牛社恐均衡分组</span>
+        <div className="w-9 h-5 rounded-full transition-all relative" style={{ background: balanceSocial ? 'oklch(0.78 0.16 52 / 0.4)' : 'oklch(0.22 0.022 270)', border: `1px solid ${balanceSocial ? accent : 'oklch(0.28 0.022 270)'}` }}>
+          <div className="absolute top-0.5 w-4 h-4 rounded-full transition-all" style={{ background: balanceSocial ? accent : 'oklch(0.40 0.015 270)', left: balanceSocial ? '18px' : '2px' }} />
         </div>
       </div>
 

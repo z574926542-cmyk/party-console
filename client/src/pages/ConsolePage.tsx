@@ -17,20 +17,24 @@ import type { Game, BoundTool, PlayerIdentity } from '@/types';
 // ============================================================
 function QuickPickModal({ players, onClose }: { players: PlayerIdentity[]; onClose: () => void }) {
   const [count, setCount] = useState(1);
-  const [filterGender, setFilterGender] = useState<'all' | 'male' | 'female'>('all');
-  const [filterSocial, setFilterSocial] = useState<'all' | 'extrovert' | 'introvert'>('all');
+  const [genderSet, setGenderSet] = useState<Set<string>>(new Set());
+  const [socialSet, setSocialSet] = useState<Set<string>>(new Set());
   const [results, setResults] = useState<number[]>([]);
   const [excludeInput, setExcludeInput] = useState('');
   const [rangeMin, setRangeMin] = useState('');
   const [rangeMax, setRangeMax] = useState('');
-
+  const toggleSet = (set: Set<string>, val: string, setter: (s: Set<string>) => void) => {
+    const next = new Set(Array.from(set));
+    if (next.has(val)) next.delete(val); else next.add(val);
+    setter(next);
+  };
   const excludeSet = new Set(
     excludeInput.split(/[,，\s]+/).map(s => parseInt(s.trim())).filter(n => !isNaN(n))
   );
 
   const eligible = players.filter(p => {
-    if (filterGender !== 'all' && p.gender !== filterGender) return false;
-    if (filterSocial !== 'all' && p.socialType !== filterSocial) return false;
+    if (genderSet.size > 0 && !genderSet.has(p.gender)) return false;
+    if (socialSet.size > 0 && !socialSet.has(p.socialType)) return false;
     if (excludeSet.has(p.number)) return false;
     const min = parseInt(rangeMin); const max = parseInt(rangeMax);
     if (!isNaN(min) && p.number < min) return false;
@@ -71,19 +75,19 @@ function QuickPickModal({ players, onClose }: { players: PlayerIdentity[]; onClo
           </div>
         </div>
         <div className="mb-3">
-          <div className="section-label">性别</div>
+          <div className="section-label">性别（可多选）</div>
           <div className="flex gap-2">
-            <FBtn active={filterGender === 'all'} onClick={() => setFilterGender('all')} grad="linear-gradient(135deg,#9e9e9e,#757575)">全部</FBtn>
-            <FBtn active={filterGender === 'male'} onClick={() => setFilterGender('male')} grad="linear-gradient(135deg,#42a5f5,#1976d2)">男生</FBtn>
-            <FBtn active={filterGender === 'female'} onClick={() => setFilterGender('female')} grad="linear-gradient(135deg,#f48fb1,#e91e63)">女生</FBtn>
+            <FBtn active={genderSet.has('male')} onClick={() => toggleSet(genderSet, 'male', setGenderSet)} grad="linear-gradient(135deg,#42a5f5,#1976d2)">♂ 男生</FBtn>
+            <FBtn active={genderSet.has('female')} onClick={() => toggleSet(genderSet, 'female', setGenderSet)} grad="linear-gradient(135deg,#f48fb1,#e91e63)">♀ 女生</FBtn>
+            {genderSet.size > 0 && <FBtn active={false} onClick={() => setGenderSet(new Set())} grad="">清除</FBtn>}
           </div>
         </div>
         <div className="mb-3">
-          <div className="section-label">社交属性</div>
+          <div className="section-label">社交属性（可多选）</div>
           <div className="flex gap-2">
-            <FBtn active={filterSocial === 'all'} onClick={() => setFilterSocial('all')} grad="linear-gradient(135deg,#9e9e9e,#757575)">全部</FBtn>
-            <FBtn active={filterSocial === 'extrovert'} onClick={() => setFilterSocial('extrovert')} grad="linear-gradient(135deg,#ffca28,#ff8a65)">社牛</FBtn>
-            <FBtn active={filterSocial === 'introvert'} onClick={() => setFilterSocial('introvert')} grad="linear-gradient(135deg,#9fa8da,#7c4dff)">社恐</FBtn>
+            <FBtn active={socialSet.has('extrovert')} onClick={() => toggleSet(socialSet, 'extrovert', setSocialSet)} grad="linear-gradient(135deg,#ffca28,#ff8a65)">☀️ 社牛</FBtn>
+            <FBtn active={socialSet.has('introvert')} onClick={() => toggleSet(socialSet, 'introvert', setSocialSet)} grad="linear-gradient(135deg,#9fa8da,#7c4dff)">🌙 社恐</FBtn>
+            {socialSet.size > 0 && <FBtn active={false} onClick={() => setSocialSet(new Set())} grad="">清除</FBtn>}
           </div>
         </div>
         {/* 号码筛选 */}
@@ -172,8 +176,32 @@ function QuickGroupModal({ players, onClose }: { players: PlayerIdentity[]; onCl
   });
   const handleGroup = () => {
     if (effectivePlayers.length === 0) { toast.error('没有符合条件的玩家'); return; }
-    let pool = [...effectivePlayers];
-    if (balanceGender) {
+    let pool = [...effectivePlayers].sort(() => Math.random() - 0.5);
+    if (balanceGender && balanceSocial) {
+      const interleave = (arr: typeof pool) => {
+        const ext = arr.filter(p => p.socialType === 'extrovert');
+        const intr = arr.filter(p => p.socialType === 'introvert');
+        const oth = arr.filter(p => p.socialType === 'unknown');
+        const res: typeof pool = [];
+        const m = Math.max(ext.length, intr.length, oth.length);
+        for (let i = 0; i < m; i++) {
+          if (ext[i]) res.push(ext[i]);
+          if (intr[i]) res.push(intr[i]);
+          if (oth[i]) res.push(oth[i]);
+        }
+        return res;
+      };
+      const males = interleave(pool.filter(p => p.gender === 'male'));
+      const females = interleave(pool.filter(p => p.gender === 'female'));
+      const others = interleave(pool.filter(p => p.gender === 'unknown'));
+      pool = [];
+      const maxLen = Math.max(males.length, females.length, others.length);
+      for (let i = 0; i < maxLen; i++) {
+        if (males[i]) pool.push(males[i]);
+        if (females[i]) pool.push(females[i]);
+        if (others[i]) pool.push(others[i]);
+      }
+    } else if (balanceGender) {
       const males = pool.filter(p => p.gender === 'male');
       const females = pool.filter(p => p.gender === 'female');
       const others = pool.filter(p => p.gender === 'unknown');
@@ -195,14 +223,11 @@ function QuickGroupModal({ players, onClose }: { players: PlayerIdentity[]; onCl
         if (introverts[i]) pool.push(introverts[i]);
         if (others[i]) pool.push(others[i]);
       }
-    } else {
-      pool = [...effectivePlayers].sort(() => Math.random() - 0.5);
     }
     const groups: number[][] = Array.from({ length: groupCount }, () => []);
     pool.forEach((p, i) => groups[i % groupCount].push(p.number));
     setResults(groups);
   };
-
   const grads = [
     'linear-gradient(135deg,#ec407a,#7c4dff)',
     'linear-gradient(135deg,#42a5f5,#26c6da)',
@@ -245,8 +270,8 @@ function QuickGroupModal({ players, onClose }: { players: PlayerIdentity[]; onCl
             <span className="text-sm ml-2" style={{ color: 'oklch(0.55 0.04 280)' }}>每组约 {Math.ceil(effectivePlayers.length / groupCount)} 人</span>
           </div>
           <div className="flex gap-5 ml-6">
-            <CheckBox active={balanceGender} onToggle={() => { setBalanceGender(!balanceGender); setBalanceSocial(false); }} label="男女平衡" />
-            <CheckBox active={balanceSocial} onToggle={() => { setBalanceSocial(!balanceSocial); setBalanceGender(false); }} label="社牛社恐平衡" />
+            <CheckBox active={balanceGender} onToggle={() => setBalanceGender(!balanceGender)} label="男女平衡" />
+            <CheckBox active={balanceSocial} onToggle={() => setBalanceSocial(!balanceSocial)} label="社牛社恐平衡" />
           </div>
           <div className="ml-auto flex items-center gap-3">
             {/* 眼睛按钮：控制身份标签显示 */}

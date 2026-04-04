@@ -92,15 +92,33 @@ function SettlePickModal({
 // ============================================================
 function RandomPickModal({ players, onClose }: { players: PlayerIdentity[]; onClose: () => void }) {
   const [count, setCount] = useState(1);
-  const [filterGender, setFilterGender] = useState<'all' | 'male' | 'female'>('all');
-  const [filterSocial, setFilterSocial] = useState<'all' | 'extrovert' | 'introvert'>('all');
+  // 多选：空集表示不限制（全部）
+  const [genderSet, setGenderSet] = useState<Set<string>>(new Set());
+  const [socialSet, setSocialSet] = useState<Set<string>>(new Set());
   const [results, setResults] = useState<number[]>([]);
-
-  const eligible = players.filter(p => {
-    if (filterGender !== 'all' && p.gender !== filterGender) return false;
-    if (filterSocial !== 'all' && p.socialType !== filterSocial) return false;
+  const [excludeInput, setExcludeInput] = useState('');
+  const [rangeMin, setRangeMin] = useState('');
+  const [rangeMax, setRangeMax] = useState('');
+  const toggleSet = (set: Set<string>, val: string, setter: (s: Set<string>) => void) => {
+    const next = new Set(Array.from(set));
+    if (next.has(val)) next.delete(val); else next.add(val);
+    setter(next);
+  };
+  const excludeNums = React.useMemo(
+    () => excludeInput.split(/[,，\s]+/).map(s => parseInt(s.trim())).filter(n => !isNaN(n)),
+    [excludeInput]
+  );
+  const eligible = React.useMemo(() => players.filter(p => {
+    // 性别多选：有勾选时必须匹配，未勾选时不限制
+    if (genderSet.size > 0 && !genderSet.has(p.gender)) return false;
+    // 社交多选
+    if (socialSet.size > 0 && !socialSet.has(p.socialType)) return false;
+    if (excludeNums.includes(p.number)) return false;
+    const min = parseInt(rangeMin); const max = parseInt(rangeMax);
+    if (!isNaN(min) && p.number < min) return false;
+    if (!isNaN(max) && p.number > max) return false;
     return true;
-  });
+  }), [players, genderSet, socialSet, excludeNums, rangeMin, rangeMax]);
 
   const handlePick = () => {
     if (eligible.length === 0) { toast.error('没有符合条件的玩家'); return; }
@@ -135,19 +153,44 @@ function RandomPickModal({ players, onClose }: { players: PlayerIdentity[]; onCl
           </div>
         </div>
         <div className="mb-3">
-          <div className="section-label">性别</div>
+          <div className="section-label">性别（可多选）</div>
           <div className="flex gap-2">
-            <FBtn active={filterGender === 'all'} onClick={() => setFilterGender('all')} grad="linear-gradient(135deg,#9e9e9e,#757575)">全部</FBtn>
-            <FBtn active={filterGender === 'male'} onClick={() => setFilterGender('male')} grad="linear-gradient(135deg,#42a5f5,#1976d2)">男生</FBtn>
-            <FBtn active={filterGender === 'female'} onClick={() => setFilterGender('female')} grad="linear-gradient(135deg,#f48fb1,#e91e63)">女生</FBtn>
+            <FBtn active={genderSet.has('male')} onClick={() => toggleSet(genderSet, 'male', setGenderSet)} grad="linear-gradient(135deg,#42a5f5,#1976d2)">♂ 男生</FBtn>
+            <FBtn active={genderSet.has('female')} onClick={() => toggleSet(genderSet, 'female', setGenderSet)} grad="linear-gradient(135deg,#f48fb1,#e91e63)">♀ 女生</FBtn>
+            {genderSet.size > 0 && <FBtn active={false} onClick={() => setGenderSet(new Set())} grad="">清除</FBtn>}
           </div>
         </div>
-        <div className="mb-5">
-          <div className="section-label">社交属性</div>
+        <div className="mb-3">
+          <div className="section-label">社交属性（可多选）</div>
           <div className="flex gap-2">
-            <FBtn active={filterSocial === 'all'} onClick={() => setFilterSocial('all')} grad="linear-gradient(135deg,#9e9e9e,#757575)">全部</FBtn>
-            <FBtn active={filterSocial === 'extrovert'} onClick={() => setFilterSocial('extrovert')} grad="linear-gradient(135deg,#ffca28,#ff8a65)">社牛</FBtn>
-            <FBtn active={filterSocial === 'introvert'} onClick={() => setFilterSocial('introvert')} grad="linear-gradient(135deg,#9fa8da,#7c4dff)">社恐</FBtn>
+            <FBtn active={socialSet.has('extrovert')} onClick={() => toggleSet(socialSet, 'extrovert', setSocialSet)} grad="linear-gradient(135deg,#ffca28,#ff8a65)">☀️ 社牛</FBtn>
+            <FBtn active={socialSet.has('introvert')} onClick={() => toggleSet(socialSet, 'introvert', setSocialSet)} grad="linear-gradient(135deg,#9fa8da,#7c4dff)">🌙 社恐</FBtn>
+            {socialSet.size > 0 && <FBtn active={false} onClick={() => setSocialSet(new Set())} grad="">清除</FBtn>}
+          </div>
+        </div>
+        {/* 排除号码 & 号码区间 */}
+        <div className="mb-3">
+          <div className="section-label">排除号码</div>
+          <input value={excludeInput} onChange={e => setExcludeInput(e.target.value)}
+            placeholder="如：3, 7, 12（逗号分隔）"
+            className="w-full px-3 py-2 rounded-xl text-xs outline-none"
+            style={{ background: 'rgba(200,180,240,0.15)', color: 'oklch(0.25 0.03 280)', border: '1px solid rgba(200,180,240,0.3)' }} />
+        </div>
+        <div className="mb-5">
+          <div className="section-label">号码区间</div>
+          <div className="flex items-center gap-2">
+            <input value={rangeMin} onChange={e => setRangeMin(e.target.value)} placeholder="最小" type="number"
+              className="w-20 px-3 py-2 rounded-xl text-xs outline-none text-center"
+              style={{ background: 'rgba(200,180,240,0.15)', color: 'oklch(0.25 0.03 280)', border: '1px solid rgba(200,180,240,0.3)' }} />
+            <span className="text-xs" style={{ color: 'oklch(0.55 0.04 280)' }}>—</span>
+            <input value={rangeMax} onChange={e => setRangeMax(e.target.value)} placeholder="最大" type="number"
+              className="w-20 px-3 py-2 rounded-xl text-xs outline-none text-center"
+              style={{ background: 'rgba(200,180,240,0.15)', color: 'oklch(0.25 0.03 280)', border: '1px solid rgba(200,180,240,0.3)' }} />
+            {(excludeInput || rangeMin || rangeMax) && (
+              <button onClick={() => { setExcludeInput(''); setRangeMin(''); setRangeMax(''); }}
+                className="ml-auto px-2.5 py-1.5 rounded-xl text-xs font-bold"
+                style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}>清除</button>
+            )}
           </div>
         </div>
         {results.length > 0 && (
@@ -320,11 +363,37 @@ function GroupModal({ players, onClose }: { players: PlayerIdentity[]; onClose: 
 
   const doGroup = () => {
     if (effectivePlayers.length === 0) { toast.error('没有符合条件的玩家'); return; }
-    let pool = [...effectivePlayers];
-    if (balanceGender) {
-      const males = pool.filter(p => p.gender === 'male').sort(() => Math.random() - 0.5);
-      const females = pool.filter(p => p.gender === 'female').sort(() => Math.random() - 0.5);
-      const others = pool.filter(p => p.gender === 'unknown').sort(() => Math.random() - 0.5);
+    let pool = [...effectivePlayers].sort(() => Math.random() - 0.5);
+    // 优先级：男女平衡 > 社牛社恐平衡，两者可同时勾选
+    if (balanceGender && balanceSocial) {
+      // 先按性别分桶，每桶内再按社交类型交叉排列
+      const interleave = (arr: typeof pool) => {
+        const ext = arr.filter(p => p.socialType === 'extrovert');
+        const intr = arr.filter(p => p.socialType === 'introvert');
+        const oth = arr.filter(p => p.socialType === 'unknown');
+        const res: typeof pool = [];
+        const m = Math.max(ext.length, intr.length, oth.length);
+        for (let i = 0; i < m; i++) {
+          if (ext[i]) res.push(ext[i]);
+          if (intr[i]) res.push(intr[i]);
+          if (oth[i]) res.push(oth[i]);
+        }
+        return res;
+      };
+      const males = interleave(pool.filter(p => p.gender === 'male'));
+      const females = interleave(pool.filter(p => p.gender === 'female'));
+      const others = interleave(pool.filter(p => p.gender === 'unknown'));
+      pool = [];
+      const maxLen = Math.max(males.length, females.length, others.length);
+      for (let i = 0; i < maxLen; i++) {
+        if (males[i]) pool.push(males[i]);
+        if (females[i]) pool.push(females[i]);
+        if (others[i]) pool.push(others[i]);
+      }
+    } else if (balanceGender) {
+      const males = pool.filter(p => p.gender === 'male');
+      const females = pool.filter(p => p.gender === 'female');
+      const others = pool.filter(p => p.gender === 'unknown');
       pool = [];
       const maxLen = Math.max(males.length, females.length, others.length);
       for (let i = 0; i < maxLen; i++) {
@@ -333,9 +402,9 @@ function GroupModal({ players, onClose }: { players: PlayerIdentity[]; onClose: 
         if (others[i]) pool.push(others[i]);
       }
     } else if (balanceSocial) {
-      const ext = pool.filter(p => p.socialType === 'extrovert').sort(() => Math.random() - 0.5);
-      const intr = pool.filter(p => p.socialType === 'introvert').sort(() => Math.random() - 0.5);
-      const oth = pool.filter(p => p.socialType === 'unknown').sort(() => Math.random() - 0.5);
+      const ext = pool.filter(p => p.socialType === 'extrovert');
+      const intr = pool.filter(p => p.socialType === 'introvert');
+      const oth = pool.filter(p => p.socialType === 'unknown');
       pool = [];
       const maxLen = Math.max(ext.length, intr.length, oth.length);
       for (let i = 0; i < maxLen; i++) {
@@ -343,8 +412,6 @@ function GroupModal({ players, onClose }: { players: PlayerIdentity[]; onClose: 
         if (intr[i]) pool.push(intr[i]);
         if (oth[i]) pool.push(oth[i]);
       }
-    } else {
-      pool = [...effectivePlayers].sort(() => Math.random() - 0.5);
     }
     const groups: number[][] = Array.from({ length: groupCount }, () => []);
     pool.forEach((p, i) => groups[i % groupCount].push(p.number));
@@ -412,8 +479,8 @@ function GroupModal({ players, onClose }: { players: PlayerIdentity[]; onClose: 
             </div>
           </div>
           <div className="mb-4 flex gap-4">
-            <CheckBox active={balanceGender} onToggle={() => { setBalanceGender(!balanceGender); setBalanceSocial(false); }} label="男女平衡" />
-            <CheckBox active={balanceSocial} onToggle={() => { setBalanceSocial(!balanceSocial); setBalanceGender(false); }} label="社牛社恐平衡" />
+            <CheckBox active={balanceGender} onToggle={() => setBalanceGender(!balanceGender)} label="男女平衡" />
+            <CheckBox active={balanceSocial} onToggle={() => setBalanceSocial(!balanceSocial)} label="社牛社恐平衡" />
           </div>
           {/* 筛选条件 */}
           <div className="mb-4 flex flex-col gap-2">
