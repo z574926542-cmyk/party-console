@@ -48,6 +48,7 @@ export default function PeripheralPage() {
   const [search, setSearch] = useState('');
   const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState<number | null>(null);
+  const [hasNumberFilter, setHasNumberFilter] = useState<'all' | 'with' | 'without'>('all');
 
   const records = state.peripheralRecords ?? [];
 
@@ -62,6 +63,8 @@ export default function PeripheralPage() {
     if (!showCompleted && r.completed) return false;
     if (filter === 'reward' && r.category !== 'reward') return false;
     if (filter === 'penalty' && r.category !== 'penalty') return false;
+    if (hasNumberFilter === 'with' && !(r.playerNumber > 0)) return false;
+    if (hasNumberFilter === 'without' && r.playerNumber > 0) return false;
     if (selectedPlayer !== null && r.playerNumber !== selectedPlayer) return false;
     if (search) {
       const q = search.toLowerCase();
@@ -73,7 +76,7 @@ export default function PeripheralPage() {
       );
     }
     return true;
-  }), [records, filter, showCompleted, search, selectedPlayer]);
+  }), [records, filter, showCompleted, search, selectedPlayer, hasNumberFilter]);
 
   const stats = {
     total: records.length,
@@ -218,8 +221,29 @@ export default function PeripheralPage() {
         </div>
       </div>
 
+      {/* 号码存在筛选条 */}
+      <div className="flex-shrink-0 px-6 py-2 flex items-center gap-2"
+        style={{ background: 'rgba(255,255,255,0.25)', borderBottom: '1px solid rgba(200,180,240,0.12)' }}>
+        <span className="text-xs font-semibold flex-shrink-0" style={{ color: 'oklch(0.55 0.04 280)' }}>号码：</span>
+        {(['all', 'with', 'without'] as const).map(v => (
+          <button key={v}
+            onClick={() => { setHasNumberFilter(v); if (v === 'without') setSelectedPlayer(null); }}
+            className="px-2.5 py-1 rounded-xl text-xs font-bold transition-all"
+            style={hasNumberFilter === v
+              ? { background: 'linear-gradient(135deg,#7c4dff,#42a5f5)', color: 'white', boxShadow: '0 2px 6px rgba(66,165,245,0.3)' }
+              : { background: 'rgba(200,180,240,0.15)', color: 'oklch(0.50 0.06 280)', border: '1px solid rgba(200,180,240,0.25)' }
+            }>
+            {v === 'all' ? '全部' : v === 'with' ? '有号码' : '无号码'}
+          </button>
+        ))}
+        {hasNumberFilter !== 'all' && (
+          <span className="text-xs ml-1" style={{ color: 'oklch(0.60 0.04 280)' }}>
+            {hasNumberFilter === 'with' ? `已绑定玩家 ${filtered.length} 条` : `未绑定玩家 ${filtered.length} 条`}
+          </span>
+        )}
+      </div>
       {/* 玩家号快速筛选条 */}
-      {allPlayerNumbers.length > 0 && (
+      {allPlayerNumbers.length > 0 && hasNumberFilter !== 'without' && (
         <div className="flex-shrink-0 px-6 py-2 flex items-center gap-2 flex-wrap"
           style={{ background: 'rgba(255,255,255,0.35)', borderBottom: '1px solid rgba(200,180,240,0.15)' }}>
           <span className="text-xs font-semibold flex-shrink-0" style={{ color: 'oklch(0.55 0.04 280)' }}>按玩家：</span>
