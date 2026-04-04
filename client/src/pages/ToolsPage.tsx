@@ -600,9 +600,10 @@ function RandomGroupTool() {
                 </div>
                 <div className="flex flex-wrap gap-1.5 px-3 py-2" style={{ background: 'oklch(0.155 0.022 270)' }}>
                   {group.map(p => (
-                    <span key={p.id} className="font-mono-display text-sm font-bold px-2 py-0.5 rounded-lg" style={{ background: 'oklch(0.19 0.022 270)', color: 'oklch(0.82 0.008 270)', border: '1px solid oklch(0.26 0.022 270)' }}>
+                    <span key={p.id} className="inline-flex items-center gap-0.5 font-mono-display text-sm font-bold px-2 py-0.5 rounded-lg" style={{ background: 'oklch(0.19 0.022 270)', color: 'oklch(0.82 0.008 270)', border: '1px solid oklch(0.26 0.022 270)' }}>
                       #{p.number}
-                      {p.gender !== 'unknown' && <span className="ml-0.5 text-xs" style={{ color: 'oklch(0.55 0.02 270)' }}>{p.gender === 'male' ? '♂' : '♀'}</span>}
+                      {p.gender !== 'unknown' && <span className="ml-0.5 text-xs" style={{ color: p.gender === 'male' ? '#64b5f6' : '#f48fb1' }}>{p.gender === 'male' ? '♂' : '♀'}</span>}
+                      {p.socialType !== 'unknown' && <span className="text-xs">{p.socialType === 'extrovert' ? '☀️' : '🌙'}</span>}
                     </span>
                   ))}
                 </div>

@@ -247,24 +247,45 @@ function GroupResultFullscreen({ results, players, onRegroup, onClose }: {
               </div>
               {/* 号码列表 */}
               <div className="p-4 flex flex-wrap gap-3 content-start">
-                {group.map(n => (
-                  <div
-                    key={n}
-                    className="flex items-center justify-center font-black rounded-2xl"
-                    style={{
-                      background: g.bg,
-                      color: '#fff',
-                      fontFamily: '"DIN Alternate", "Bebas Neue", "Barlow", monospace',
-                      fontSize: group.length <= 6 ? '2.8rem' : group.length <= 12 ? '2.2rem' : group.length <= 20 ? '1.8rem' : '1.4rem',
-                      width: group.length <= 6 ? '5rem' : group.length <= 12 ? '4rem' : group.length <= 20 ? '3.2rem' : '2.8rem',
-                      height: group.length <= 6 ? '5rem' : group.length <= 12 ? '4rem' : group.length <= 20 ? '3.2rem' : '2.8rem',
-                      boxShadow: `0 4px 16px ${g.solid}40`,
-                      letterSpacing: '-0.02em',
-                    }}
-                  >
-                    {n}
-                  </div>
-                ))}
+                {group.map(n => {
+                  const player = players.find(p => p.number === n);
+                  const hasGender = player && player.gender !== 'unknown';
+                  const hasSocial = player && player.socialType !== 'unknown';
+                  const hasTag = hasGender || hasSocial;
+                  const numSize = group.length <= 6 ? '2.8rem' : group.length <= 12 ? '2.2rem' : group.length <= 20 ? '1.8rem' : '1.4rem';
+                  const boxSize = group.length <= 6 ? '5rem' : group.length <= 12 ? '4rem' : group.length <= 20 ? '3.2rem' : '2.8rem';
+                  return (
+                    <div key={n} className="flex flex-col items-center gap-1">
+                      <div
+                        className="flex items-center justify-center font-black rounded-2xl"
+                        style={{
+                          background: g.bg,
+                          color: '#fff',
+                          fontFamily: '"DIN Alternate", "Bebas Neue", "Barlow", monospace',
+                          fontSize: numSize,
+                          width: boxSize,
+                          height: boxSize,
+                          boxShadow: `0 4px 16px ${g.solid}40`,
+                          letterSpacing: '-0.02em',
+                        }}
+                      >
+                        {n}
+                      </div>
+                      {hasTag && (
+                        <div className="flex gap-0.5 items-center">
+                          {hasGender && (
+                            <span className="text-xs font-bold" style={{ color: player!.gender === 'male' ? '#64b5f6' : '#f48fb1' }}>
+                              {player!.gender === 'male' ? '♂' : '♀'}
+                            </span>
+                          )}
+                          {hasSocial && (
+                            <span className="text-xs">{player!.socialType === 'extrovert' ? '☀️' : '🌙'}</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           );

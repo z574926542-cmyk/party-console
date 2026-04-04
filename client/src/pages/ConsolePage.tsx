@@ -196,9 +196,28 @@ function QuickGroupModal({ players, onClose }: { players: PlayerIdentity[]; onCl
               <div key={gi} className="rounded-3xl p-6 flex flex-col" style={{ background: 'rgba(255,255,255,0.85)', boxShadow: '0 8px 32px rgba(124,77,255,0.12)', border: '2px solid rgba(200,180,240,0.3)' }}>
                 <div className="text-xl font-black mb-4 pb-3 border-b" style={{ background: grads[gi % grads.length], WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', borderColor: 'rgba(200,180,240,0.3)' }}>第 {gi + 1} 组 · {group.length} 人</div>
                 <div className="flex flex-wrap gap-3">
-                  {group.map(n => (
-                    <span key={n} className="rounded-2xl flex items-center justify-center font-black text-white" style={{ background: grads[gi % grads.length], fontSize: '1.75rem', width: '3.5rem', height: '3.5rem', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', fontVariantNumeric: 'tabular-nums' }}>{n}</span>
-                  ))}
+                  {group.map(n => {
+                    const player = players.find(p => p.number === n);
+                    const hasGender = player && player.gender !== 'unknown';
+                    const hasSocial = player && player.socialType !== 'unknown';
+                    return (
+                      <div key={n} className="flex flex-col items-center gap-0.5">
+                        <span className="rounded-2xl flex items-center justify-center font-black text-white" style={{ background: grads[gi % grads.length], fontSize: '1.75rem', width: '3.5rem', height: '3.5rem', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', fontVariantNumeric: 'tabular-nums' }}>{n}</span>
+                        {(hasGender || hasSocial) && (
+                          <div className="flex gap-0.5 items-center">
+                            {hasGender && (
+                              <span className="text-xs font-bold" style={{ color: player!.gender === 'male' ? '#42a5f5' : '#ec407a' }}>
+                                {player!.gender === 'male' ? '♂' : '♀'}
+                              </span>
+                            )}
+                            {hasSocial && (
+                              <span className="text-xs">{player!.socialType === 'extrovert' ? '☀️' : '🌙'}</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             ))}
