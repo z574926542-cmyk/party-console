@@ -20,10 +20,21 @@ function QuickPickModal({ players, onClose }: { players: PlayerIdentity[]; onClo
   const [filterGender, setFilterGender] = useState<'all' | 'male' | 'female'>('all');
   const [filterSocial, setFilterSocial] = useState<'all' | 'extrovert' | 'introvert'>('all');
   const [results, setResults] = useState<number[]>([]);
+  const [excludeInput, setExcludeInput] = useState('');
+  const [rangeMin, setRangeMin] = useState('');
+  const [rangeMax, setRangeMax] = useState('');
+
+  const excludeSet = new Set(
+    excludeInput.split(/[,，\s]+/).map(s => parseInt(s.trim())).filter(n => !isNaN(n))
+  );
 
   const eligible = players.filter(p => {
     if (filterGender !== 'all' && p.gender !== filterGender) return false;
     if (filterSocial !== 'all' && p.socialType !== filterSocial) return false;
+    if (excludeSet.has(p.number)) return false;
+    const min = parseInt(rangeMin); const max = parseInt(rangeMax);
+    if (!isNaN(min) && p.number < min) return false;
+    if (!isNaN(max) && p.number > max) return false;
     return true;
   });
 
@@ -67,12 +78,53 @@ function QuickPickModal({ players, onClose }: { players: PlayerIdentity[]; onClo
             <FBtn active={filterGender === 'female'} onClick={() => setFilterGender('female')} grad="linear-gradient(135deg,#f48fb1,#e91e63)">女生</FBtn>
           </div>
         </div>
-        <div className="mb-5">
+        <div className="mb-3">
           <div className="section-label">社交属性</div>
           <div className="flex gap-2">
             <FBtn active={filterSocial === 'all'} onClick={() => setFilterSocial('all')} grad="linear-gradient(135deg,#9e9e9e,#757575)">全部</FBtn>
             <FBtn active={filterSocial === 'extrovert'} onClick={() => setFilterSocial('extrovert')} grad="linear-gradient(135deg,#ffca28,#ff8a65)">社牛</FBtn>
             <FBtn active={filterSocial === 'introvert'} onClick={() => setFilterSocial('introvert')} grad="linear-gradient(135deg,#9fa8da,#7c4dff)">社恐</FBtn>
+          </div>
+        </div>
+        {/* 号码筛选 */}
+        <div className="mb-5 space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold w-14 shrink-0" style={{ color: 'oklch(0.45 0.06 280)' }}>排除号码</span>
+            <input
+              value={excludeInput}
+              onChange={e => setExcludeInput(e.target.value)}
+              placeholder="如：3, 7, 12"
+              className="flex-1 h-7 rounded-xl px-3 text-xs outline-none"
+              style={{ background: 'rgba(200,180,240,0.15)', border: '1px solid rgba(180,160,220,0.3)', color: 'oklch(0.22 0.02 280)' }}
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold w-14 shrink-0" style={{ color: 'oklch(0.45 0.06 280)' }}>号码区间</span>
+            <input
+              value={rangeMin}
+              onChange={e => setRangeMin(e.target.value)}
+              placeholder="最小"
+              type="number"
+              className="w-16 h-7 rounded-xl px-2 text-xs outline-none text-center"
+              style={{ background: 'rgba(200,180,240,0.15)', border: '1px solid rgba(180,160,220,0.3)', color: 'oklch(0.22 0.02 280)' }}
+            />
+            <span className="text-xs" style={{ color: 'oklch(0.55 0.04 280)' }}>—</span>
+            <input
+              value={rangeMax}
+              onChange={e => setRangeMax(e.target.value)}
+              placeholder="最大"
+              type="number"
+              className="w-16 h-7 rounded-xl px-2 text-xs outline-none text-center"
+              style={{ background: 'rgba(200,180,240,0.15)', border: '1px solid rgba(180,160,220,0.3)', color: 'oklch(0.22 0.02 280)' }}
+            />
+            {(excludeInput || rangeMin || rangeMax) && (
+              <button
+                onClick={() => { setExcludeInput(''); setRangeMin(''); setRangeMax(''); }}
+                className="text-xs px-2.5 py-1 rounded-xl font-bold"
+                style={{ background: 'linear-gradient(135deg,#ec407a,#7c4dff)', color: 'white' }}>
+                清除
+              </button>
+            )}
           </div>
         </div>
         {results.length > 0 && (
