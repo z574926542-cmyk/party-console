@@ -374,8 +374,23 @@ export function removePeripheralRecord(state: AppState, id: string): AppState {
 }
 
 // ---- 导出/导入 ----
-export function exportGameLibrary(state: AppState): string {
-  return JSON.stringify({ gameLibrary: state.gameLibrary, tags: state.tags }, null, 2);
+// 导出整个游戏库（异步，嵌入所有游戏的周边图片 base64，支持跨设备迁移）
+export async function exportGameLibrary(state: AppState): Promise<string> {
+  const libraryWithImages = await Promise.all(
+    state.gameLibrary.map(async (game) => {
+      const imagesWithData = await Promise.all(
+        (game.settlementImages || []).map(async (img) => {
+          let dataUrl = img.dataUrl || null;
+          if (!dataUrl && img.imageId) {
+            dataUrl = await loadImage(img.imageId);
+          }
+          return { ...img, dataUrl: dataUrl || undefined };
+        })
+      );
+      return { ...game, settlementImages: imagesWithData };
+    })
+  );
+  return JSON.stringify({ version: 1, gameLibrary: libraryWithImages, tags: state.tags }, null, 2);
 }
 
 // 导出单个游戏为 JSON模板（包含周边图片 dataUrl）
@@ -496,6 +511,7 @@ export function exportWheels(state: AppState): string {
   return JSON.stringify({ wheels: state.wheels }, null, 2);
 }
 
+// 导入整个游戏库（同步部分，将图片写回 IndexedDB 需在外部异步处理）
 export function importGameLibrary(state: AppState, json: string): AppState {
   const data = JSON.parse(json);
   const importedGames: Game[] = data.gameLibrary || [];
@@ -504,6 +520,18 @@ export function importGameLibrary(state: AppState, json: string): AppState {
   const newGames = importedGames.filter(g => !existingIds.has(g.id));
   const existingTagIds = new Set(state.tags.map(t => t.id));
   const newTags = importedTags.filter(t => !existingTagIds.has(t.id));
+  // 异步将图片 base64 写入 IndexedDB（火起就忘）
+  Promise.all(
+    newGames.map(game =>
+      Promise.all(
+        (game.settlementImages || []).map(async img => {
+          if (img.dataUrl && img.imageId) {
+            await saveImage(img.imageId, img.dataUrl);
+          }
+        })
+      )
+    )
+  ).catch(() => {});
   return {
     ...state,
     gameLibrary: [...state.gameLibrary, ...newGames],

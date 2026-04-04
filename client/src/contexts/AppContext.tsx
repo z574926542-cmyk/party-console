@@ -207,7 +207,7 @@ interface AppContextValue {
   getTagById: (id: string) => GameTag | undefined;
   getWheelById: (id: string) => Wheel | undefined;
   isPeripheralGame: (game: Game) => boolean;
-  exportLibraryJSON: () => string;
+  exportLibraryJSON: () => Promise<string>;
   exportWheelsJSON: () => string;
 }
 

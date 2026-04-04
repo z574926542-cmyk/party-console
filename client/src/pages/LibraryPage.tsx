@@ -480,7 +480,7 @@ function GroupCard({
 type PageTab = 'library' | 'groups';
 
 export default function LibraryPage() {
-  const { state, dispatch } = useApp();
+  const { state, dispatch, exportLibraryJSON } = useApp();
   const [, navigate] = useLocation();
   const [activeTab, setActiveTab] = useState<PageTab>('library');
   const [search, setSearch] = useState('');
@@ -540,6 +540,24 @@ export default function LibraryPage() {
   const handleDeleteGame = (gameId: string) => {
     dispatch({ type: 'REMOVE_GAME_FROM_LIBRARY', payload: gameId });
     toast.success('已从库中删除');
+  };
+
+  const handleExportAllGames = async () => {
+    if (library.length === 0) { toast.error('游戏库为空，无需导出'); return; }
+    try {
+      toast.loading('正在导出全库，请稍候…', { id: 'export-all' });
+      const json = await exportLibraryJSON();
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `游戏库-全部-${library.length}个游戏.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(`全库导出成功（${library.length} 个游戏）`, { id: 'export-all' });
+    } catch {
+      toast.error('导出失败，请重试', { id: 'export-all' });
+    }
   };
 
   const handleImportGameFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -694,6 +712,12 @@ export default function LibraryPage() {
               style={{ background: 'rgba(255,255,255,0.8)', border: '1.5px solid rgba(200,180,240,0.3)' }} />
             {activeTab === 'library' ? (
               <>
+                <button onClick={handleExportAllGames}
+                  className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all"
+                  style={{ background: 'rgba(100,116,139,0.1)', color: 'oklch(0.40 0.04 280)', border: '1.5px solid rgba(200,180,240,0.3)' }}
+                  title="导出整个游戏库为JSON（含所有图片）">
+                  ↓ 导出全库
+                </button>
                 <button onClick={() => gameImportRef.current?.click()}
                   className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all"
                   style={{ background: 'rgba(100,116,139,0.1)', color: 'oklch(0.40 0.04 280)', border: '1.5px solid rgba(200,180,240,0.3)' }}>
