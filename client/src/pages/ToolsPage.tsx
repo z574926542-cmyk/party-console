@@ -343,6 +343,9 @@ function RandomPickTool() {
   const [showIdentity, setShowIdentity] = useState(() => {
     try { return localStorage.getItem('toolsShowIdentity') === 'true'; } catch { return false; }
   });
+  const [excludeInput, setExcludeInput] = useState('');
+  const [rangeMin, setRangeMin] = useState('');
+  const [rangeMax, setRangeMax] = useState('');
   const animRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const accent = 'oklch(0.62 0.22 10)';
   const toggleIdentity = () => setShowIdentity(v => {
@@ -351,13 +354,22 @@ function RandomPickTool() {
     return next;
   });
 
+  const excludeSet = useMemo(() => new Set(
+    excludeInput.split(/[,，\s]+/).map(s => parseInt(s.trim())).filter(n => !isNaN(n))
+  ), [excludeInput]);
+
   const pool = useMemo(() => {
     let players = [...state.players];
     if (filterGender !== 'all') players = players.filter(p => p.gender === filterGender);
     if (filterSocial !== 'all') players = players.filter(p => p.socialType === filterSocial);
     if (excludePicked) players = players.filter(p => !pickedHistory.includes(p.number));
+    // 号码筛选
+    if (excludeSet.size > 0) players = players.filter(p => !excludeSet.has(p.number));
+    const min = parseInt(rangeMin); const max = parseInt(rangeMax);
+    if (!isNaN(min)) players = players.filter(p => p.number >= min);
+    if (!isNaN(max)) players = players.filter(p => p.number <= max);
     return players;
-  }, [state.players, filterGender, filterSocial, excludePicked, pickedHistory]);
+  }, [state.players, filterGender, filterSocial, excludePicked, pickedHistory, excludeSet, rangeMin, rangeMax]);
 
   const handlePick = () => {
     if (pool.length === 0) { toast.error('没有可选的玩家'); return; }
@@ -450,6 +462,47 @@ function RandomPickTool() {
               {s === 'all' ? '不限' : s === 'introvert' ? '🌙 社恐' : '☀️ 社牛'}
             </button>
           ))}
+        </div>
+        {/* 号码筛选 */}
+        <div className="flex flex-col gap-1.5 pt-1">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold shrink-0" style={{ color: 'oklch(0.45 0.015 270)', minWidth: 52 }}>排除号码</span>
+            <input
+              value={excludeInput}
+              onChange={e => setExcludeInput(e.target.value)}
+              placeholder="如：3, 7, 12"
+              className="flex-1 h-7 rounded-lg px-2.5 text-xs outline-none"
+              style={{ background: 'oklch(0.19 0.022 270)', border: '1px solid oklch(0.26 0.022 270)', color: 'oklch(0.82 0.008 270)' }}
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold shrink-0" style={{ color: 'oklch(0.45 0.015 270)', minWidth: 52 }}>号码区间</span>
+            <input
+              value={rangeMin}
+              onChange={e => setRangeMin(e.target.value)}
+              placeholder="最小"
+              type="number"
+              className="w-16 h-7 rounded-lg px-2 text-xs outline-none text-center"
+              style={{ background: 'oklch(0.19 0.022 270)', border: '1px solid oklch(0.26 0.022 270)', color: 'oklch(0.82 0.008 270)' }}
+            />
+            <span className="text-xs" style={{ color: 'oklch(0.40 0.015 270)' }}>—</span>
+            <input
+              value={rangeMax}
+              onChange={e => setRangeMax(e.target.value)}
+              placeholder="最大"
+              type="number"
+              className="w-16 h-7 rounded-lg px-2 text-xs outline-none text-center"
+              style={{ background: 'oklch(0.19 0.022 270)', border: '1px solid oklch(0.26 0.022 270)', color: 'oklch(0.82 0.008 270)' }}
+            />
+            {(excludeInput || rangeMin || rangeMax) && (
+              <button
+                onClick={() => { setExcludeInput(''); setRangeMin(''); setRangeMax(''); }}
+                className="text-xs px-2 py-0.5 rounded-lg"
+                style={{ background: 'oklch(0.62 0.22 10 / 0.15)', color: accent }}>
+                清除
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
