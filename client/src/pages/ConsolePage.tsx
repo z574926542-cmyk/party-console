@@ -9,7 +9,7 @@ import { useLocation } from 'wouter';
 import { nanoid } from 'nanoid';
 import { toast } from 'sonner';
 import { useApp } from '@/contexts/AppContext';
-import { saveImage as saveImageToStore, deleteImage as deleteImageFromStore } from '@/lib/imageStore';
+import { saveImage as saveImageToStore, deleteImage as deleteImageFromStore, compressImage } from '@/lib/imageStore';
 import type { Game, BoundTool, PlayerIdentity } from '@/types';
 
 // ============================================================
@@ -376,7 +376,8 @@ function GameEditor({ game, players, wheels, tags, onSave, onLoadToStage, onSave
     if (!file) return;
     const reader = new FileReader();
     reader.onload = async (ev) => {
-      const dataUrl = ev.target?.result as string;
+      const raw = ev.target?.result as string;
+      const dataUrl = await compressImage(raw, 800, 0.82);
       const imageId = nanoid();
       await saveImageToStore(imageId, dataUrl);
       update({ settlementImages: [...draft.settlementImages, { id: nanoid(), name: file.name.replace(/\.[^/.]+$/, ''), dataUrl, imageId }] });

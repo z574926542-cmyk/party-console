@@ -53,6 +53,44 @@ function lsDelete(id: string) {
   } catch { /* ignore */ }
 }
 
+/**
+ * 压缩图片到指定最大尺寸，返回压缩后的 dataUrl
+ * @param dataUrl 原始 dataUrl
+ * @param maxSize 最大宽/高像素，默认 800
+ * @param quality JPEG 质量 0-1，默认 0.82
+ */
+export function compressImage(dataUrl: string, maxSize = 800, quality = 0.82): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const { width, height } = img;
+      // 如果图片已经很小，直接返回原始数据
+      if (width <= maxSize && height <= maxSize) { resolve(dataUrl); return; }
+      const scale = Math.min(maxSize / width, maxSize / height);
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(width * scale);
+      canvas.height = Math.round(height * scale);
+      const ctx = canvas.getContext('2d')!;
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      // PNG 转 JPEG 以减小体积（透明区域变白）
+      if (dataUrl.startsWith('data:image/png')) {
+        const canvas2 = document.createElement('canvas');
+        canvas2.width = canvas.width;
+        canvas2.height = canvas.height;
+        const ctx2 = canvas2.getContext('2d')!;
+        ctx2.fillStyle = '#ffffff';
+        ctx2.fillRect(0, 0, canvas2.width, canvas2.height);
+        ctx2.drawImage(canvas, 0, 0);
+        resolve(canvas2.toDataURL('image/jpeg', quality));
+      } else {
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      }
+    };
+    img.onerror = () => resolve(dataUrl); // 压缩失败时返回原始数据
+    img.src = dataUrl;
+  });
+}
+
 export async function saveImage(id: string, dataUrl: string): Promise<void> {
   // 同时写入 localStorage 备份
   lsSave(id, dataUrl);

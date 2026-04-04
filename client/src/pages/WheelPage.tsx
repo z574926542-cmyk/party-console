@@ -7,7 +7,7 @@ import { useApp } from '@/contexts/AppContext';
 import { nanoid } from 'nanoid';
 import { toast } from 'sonner';
 import { exportSingleWheel, parseSingleWheelJSON } from '@/store';
-import { saveImage, deleteImage } from '@/lib/imageStore';
+import { saveImage, deleteImage, compressImage } from '@/lib/imageStore';
 import type { Wheel, WheelOption, WheelHistoryEntry, PlayerIdentity } from '@/types';
 
 // 三个默认轮盘 ID（与 store/index.ts 保持一致）
@@ -147,7 +147,8 @@ function OptionRow({ opt, onChange, onRemove, canRemove }: { opt: WheelOption; o
     const nameWithoutExt = file.name.replace(/.[^.]+$/, '');
     const reader = new FileReader();
     reader.onload = async (ev) => {
-      const dataUrl = ev.target?.result as string;
+      const raw = ev.target?.result as string;
+      const dataUrl = await compressImage(raw, 800, 0.82);
       // 删除旧图片（如果有）
       if (opt.imageId) { deleteImage(opt.imageId).catch(() => {}); }
       // 保存新图片到 IndexedDB
@@ -271,6 +272,7 @@ export default function WheelPage() {
   const [resultOption, setResultOption] = useState<WheelOption | null>(null);
   const [resultPlayers, setResultPlayers] = useState<number[]>([]);
   const [showPickModal, setShowPickModal] = useState(false);
+  const [showImageFullscreen, setShowImageFullscreen] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState('');
   const animRef = useRef<number | null>(null);
@@ -315,6 +317,8 @@ export default function WheelPage() {
         setSpinning(false);
         setResultOption(winner);
         setResultPlayers(playerNums);
+        // 如果有图片，自动弹出全屏展示
+        if (winner.imageDataUrl) { setShowImageFullscreen(true); }
         // 更新历史记录
         const entry: WheelHistoryEntry = {
           id: nanoid(), optionLabel: winner.label, optionColor: winner.color,
@@ -695,6 +699,56 @@ export default function WheelPage() {
         <PickPlayerModal players={state.players}
           onConfirm={nums => { setShowPickModal(false); doSpin(nums); }}
           onClose={() => setShowPickModal(false)} />
+      )}
+
+      {/* 全屏展示抽中图片 */}
+      {showImageFullscreen && resultOption?.imageDataUrl && (
+        <div
+          className="fixed inset-0 z-50 flex flex-col items-center justify-center"
+          style={{ background: 'rgba(0,0,0,0.88)', backdropFilter: 'blur(12px)' }}
+          onClick={() => setShowImageFullscreen(false)}
+        >
+          {/* 标题 */}
+          <div className="mb-6 text-center" onClick={e => e.stopPropagation()}>
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold mb-2"
+              style={{ background: `${resultOption.color}22`, color: resultOption.color, border: `1.5px solid ${resultOption.color}66` }}>
+              🎯 抽中结果
+            </div>
+            <div className="text-4xl font-black" style={{ color: resultOption.color, textShadow: `0 0 32px ${resultOption.color}88` }}>
+              {resultOption.label}
+            </div>
+            {resultPlayers.length > 0 && (
+              <div className="flex gap-2 justify-center mt-3">
+                {resultPlayers.map(n => (
+                  <span key={n} className="w-10 h-10 rounded-xl flex items-center justify-center font-black text-white text-base"
+                    style={{ background: 'linear-gradient(135deg,#ec407a,#7c4dff)' }}>{n}</span>
+                ))}
+              </div>
+            )}
+          </div>
+          {/* 大图 */}
+          <div className="relative" onClick={e => e.stopPropagation()}>
+            <img
+              src={resultOption.imageDataUrl}
+              alt={resultOption.label}
+              className="max-w-[80vw] max-h-[55vh] rounded-3xl object-contain"
+              style={{
+                border: `4px solid ${resultOption.color}`,
+                boxShadow: `0 0 60px ${resultOption.color}66, 0 24px 48px rgba(0,0,0,0.5)`
+              }}
+            />
+          </div>
+          {/* 底部提示 */}
+          <div className="mt-8 flex gap-3" onClick={e => e.stopPropagation()}>
+            <button
+              onClick={() => setShowImageFullscreen(false)}
+              className="px-8 py-3 rounded-2xl font-bold text-base"
+              style={{ background: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.8)', border: '1.5px solid rgba(255,255,255,0.2)' }}
+            >
+              点击任意处关闭
+            </button>
+          </div>
+        </div>
       )}
 
     </div>

@@ -38,6 +38,22 @@ const NAV_ITEMS = [
     shadow: 'rgba(102, 187, 106, 0.35)',
     hoverBg: 'rgba(102, 187, 106, 0.08)',
   },
+  {
+    path: '/library',
+    label: '游戏库',
+    emoji: '📚',
+    gradient: 'linear-gradient(135deg, #7c4dff, #ec407a)',
+    shadow: 'rgba(124, 77, 255, 0.35)',
+    hoverBg: 'rgba(124, 77, 255, 0.08)',
+  },
+  {
+    path: '/images',
+    label: '图片库',
+    emoji: '🖼️',
+    gradient: 'linear-gradient(135deg, #f59e0b, #ec4899)',
+    shadow: 'rgba(245, 158, 11, 0.35)',
+    hoverBg: 'rgba(245, 158, 11, 0.08)',
+  },
 ];
 
 interface MainLayoutProps {

@@ -10,8 +10,9 @@ import ConsolePage from "./pages/ConsolePage";
 import StagePage from "./pages/StagePage";
 import WheelPage from "./pages/WheelPage";
 import PeripheralPage from "./pages/PeripheralPage";
-import LibraryPage from "./pages/LibraryPage";
-import NotFound from "./pages/NotFound";
+import LibraryPage from './pages/LibraryPage';
+import ImageManagerPage from './pages/ImageManagerPage';
+import NotFound from './pages/NotFound';
 
 function Router() {
   return (
@@ -23,6 +24,7 @@ function Router() {
         <Route path="/wheel" component={WheelPage} />
         <Route path="/peripheral" component={PeripheralPage} />
         <Route path="/library" component={LibraryPage} />
+        <Route path="/images" component={ImageManagerPage} />
         <Route component={NotFound} />
       </Switch>
     </MainLayout>
