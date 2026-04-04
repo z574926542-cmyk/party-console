@@ -38,7 +38,7 @@ mac:
 
 dmg:
   title: "PartyConsole"
-  artifactName: "奇妙奇遇控制台-${version}-${arch}.dmg"
+  artifactName: "PartyConsole-${version}-${arch}.dmg"
 
 # Windows
 win:
