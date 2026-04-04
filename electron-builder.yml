@@ -28,15 +28,13 @@ files:
 extraMetadata:
   main: electron/main.js
 
-# macOS - build dmg for both Intel and Apple Silicon
+# macOS - arch is controlled by CLI flag (--x64 or --arm64) in each CI job
+# Do NOT specify arch here to avoid hdiutil /Volumes conflict when building both arches in same process
 mac:
   category: public.app-category.entertainment
   darkModeSupport: true
   target:
     - target: dmg
-      arch:
-        - x64
-        - arm64
 
 dmg:
   title: "PartyConsole"
