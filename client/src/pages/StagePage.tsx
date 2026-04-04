@@ -175,9 +175,10 @@ function RandomPickModal({ players, onClose }: { players: PlayerIdentity[]; onCl
 // ============================================================
 // 分组结果全屏展示
 // ============================================================
-function GroupResultFullscreen({ results, players, onRegroup, onClose }: {
+function GroupResultFullscreen({ results, players, showIdentity, onRegroup, onClose }: {
   results: number[][];
   players: PlayerIdentity[];
+  showIdentity?: boolean;
   onRegroup: () => void;
   onClose: () => void;
 }) {
@@ -271,7 +272,7 @@ function GroupResultFullscreen({ results, players, onRegroup, onClose }: {
                       >
                         {n}
                       </div>
-                      {hasTag && (
+                      {showIdentity && hasTag && (
                         <div className="flex gap-0.5 items-center">
                           {hasGender && (
                             <span className="text-xs font-bold" style={{ color: player!.gender === 'male' ? '#64b5f6' : '#f48fb1' }}>
@@ -302,10 +303,24 @@ function GroupModal({ players, onClose }: { players: PlayerIdentity[]; onClose: 
   const [balanceSocial, setBalanceSocial] = useState(false);
   const [results, setResults] = useState<number[][]>([]);
   const [showFullscreen, setShowFullscreen] = useState(false);
+  const [showIdentity, setShowIdentity] = useState(false);
+  const [excludeInput, setExcludeInput] = useState('');
+  const [rangeMin, setRangeMin] = useState('');
+  const [rangeMax, setRangeMax] = useState('');
+  const excludeSet = new Set(
+    excludeInput.split(/[,，\s]+/).map(s => parseInt(s.trim())).filter(n => !isNaN(n))
+  );
+  const effectivePlayers = players.filter(p => {
+    if (excludeSet.has(p.number)) return false;
+    const min = parseInt(rangeMin); const max = parseInt(rangeMax);
+    if (!isNaN(min) && p.number < min) return false;
+    if (!isNaN(max) && p.number > max) return false;
+    return true;
+  });
 
   const doGroup = () => {
-    if (players.length === 0) { toast.error('没有玩家'); return; }
-    let pool = [...players];
+    if (effectivePlayers.length === 0) { toast.error('没有符合条件的玩家'); return; }
+    let pool = [...effectivePlayers];
     if (balanceGender) {
       const males = pool.filter(p => p.gender === 'male').sort(() => Math.random() - 0.5);
       const females = pool.filter(p => p.gender === 'female').sort(() => Math.random() - 0.5);
@@ -329,7 +344,7 @@ function GroupModal({ players, onClose }: { players: PlayerIdentity[]; onClose: 
         if (oth[i]) pool.push(oth[i]);
       }
     } else {
-      pool = [...players].sort(() => Math.random() - 0.5);
+      pool = [...effectivePlayers].sort(() => Math.random() - 0.5);
     }
     const groups: number[][] = Array.from({ length: groupCount }, () => []);
     pool.forEach((p, i) => groups[i % groupCount].push(p.number));
@@ -359,6 +374,7 @@ function GroupModal({ players, onClose }: { players: PlayerIdentity[]; onClose: 
         <GroupResultFullscreen
           results={results}
           players={players}
+          showIdentity={showIdentity}
           onRegroup={() => {
             const groups = doGroup();
             if (groups) setResults(groups);
@@ -371,10 +387,20 @@ function GroupModal({ players, onClose }: { players: PlayerIdentity[]; onClose: 
           <div className="flex items-center justify-between mb-5">
             <div>
               <h3 className="text-lg font-black" style={{ color: 'oklch(0.22 0.02 280)' }}>快速分组</h3>
-              <p className="text-xs mt-0.5" style={{ color: 'oklch(0.55 0.04 280)' }}>共 {players.length} 位玩家</p>
+              <p className="text-xs mt-0.5" style={{ color: 'oklch(0.55 0.04 280)' }}>
+                共 {players.length} 位玩家
+                {effectivePlayers.length !== players.length && <span style={{ color: '#7c4dff', marginLeft: 4 }}>· 筛选后 {effectivePlayers.length} 人</span>}
+              </p>
             </div>
-            <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-lg"
-              style={{ background: 'rgba(200,180,240,0.2)', color: 'oklch(0.45 0.06 280)' }}>×</button>
+            <div className="flex items-center gap-2">
+              <button onClick={() => setShowIdentity(!showIdentity)} title={showIdentity ? '隐藏身份标签' : '显示身份标签'}
+                className="w-8 h-8 rounded-xl flex items-center justify-center text-base transition-all"
+                style={showIdentity ? { background: 'linear-gradient(135deg,#ec407a,#7c4dff)', color: 'white' } : { background: 'rgba(200,180,240,0.2)', color: 'oklch(0.55 0.04 280)' }}>
+                {showIdentity ? '👁' : '🙈'}
+              </button>
+              <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-lg"
+                style={{ background: 'rgba(200,180,240,0.2)', color: 'oklch(0.45 0.06 280)' }}>×</button>
+            </div>
           </div>
           <div className="mb-4">
             <div className="section-label">分几组</div>
@@ -382,12 +408,37 @@ function GroupModal({ players, onClose }: { players: PlayerIdentity[]; onClose: 
               <button onClick={() => setGroupCount(Math.max(2, groupCount - 1))} className="w-9 h-9 rounded-xl font-bold text-lg flex items-center justify-center" style={{ background: 'rgba(200,180,240,0.2)', color: 'oklch(0.45 0.06 280)' }}>-</button>
               <span className="text-2xl font-black w-8 text-center" style={{ color: 'oklch(0.22 0.02 280)' }}>{groupCount}</span>
               <button onClick={() => setGroupCount(Math.min(10, groupCount + 1))} className="w-9 h-9 rounded-xl font-bold text-lg flex items-center justify-center" style={{ background: 'rgba(200,180,240,0.2)', color: 'oklch(0.45 0.06 280)' }}>+</button>
-              <span className="text-xs ml-2" style={{ color: 'oklch(0.55 0.04 280)' }}>每组约 {Math.ceil(players.length / groupCount)} 人</span>
+              <span className="text-xs ml-2" style={{ color: 'oklch(0.55 0.04 280)' }}>每组约 {Math.ceil(effectivePlayers.length / groupCount)} 人</span>
             </div>
           </div>
-          <div className="mb-5 flex gap-4">
+          <div className="mb-4 flex gap-4">
             <CheckBox active={balanceGender} onToggle={() => { setBalanceGender(!balanceGender); setBalanceSocial(false); }} label="男女平衡" />
             <CheckBox active={balanceSocial} onToggle={() => { setBalanceSocial(!balanceSocial); setBalanceGender(false); }} label="社牛社恐平衡" />
+          </div>
+          {/* 筛选条件 */}
+          <div className="mb-4 flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold w-16 shrink-0" style={{ color: 'oklch(0.45 0.06 280)' }}>排除号码</span>
+              <input value={excludeInput} onChange={e => setExcludeInput(e.target.value)}
+                placeholder="如：3, 7, 12"
+                className="flex-1 rounded-xl px-3 py-1.5 text-sm outline-none"
+                style={{ background: 'rgba(200,180,240,0.15)', border: '1.5px solid rgba(180,160,220,0.3)', color: 'oklch(0.22 0.02 280)' }} />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold w-16 shrink-0" style={{ color: 'oklch(0.45 0.06 280)' }}>号码区间</span>
+              <input value={rangeMin} onChange={e => setRangeMin(e.target.value)} placeholder="最小" type="number"
+                className="w-20 rounded-xl px-3 py-1.5 text-sm outline-none text-center"
+                style={{ background: 'rgba(200,180,240,0.15)', border: '1.5px solid rgba(180,160,220,0.3)', color: 'oklch(0.22 0.02 280)' }} />
+              <span className="text-sm" style={{ color: 'oklch(0.55 0.04 280)' }}>—</span>
+              <input value={rangeMax} onChange={e => setRangeMax(e.target.value)} placeholder="最大" type="number"
+                className="w-20 rounded-xl px-3 py-1.5 text-sm outline-none text-center"
+                style={{ background: 'rgba(200,180,240,0.15)', border: '1.5px solid rgba(180,160,220,0.3)', color: 'oklch(0.22 0.02 280)' }} />
+              {(excludeInput || rangeMin || rangeMax) && (
+                <button onClick={() => { setExcludeInput(''); setRangeMin(''); setRangeMax(''); }}
+                  className="text-xs px-2 py-1 rounded-lg"
+                  style={{ background: 'rgba(255,100,100,0.1)', color: '#e57373' }}>清除</button>
+              )}
+            </div>
           </div>
           <button onClick={handleGroup} className="w-full py-3 rounded-2xl font-bold text-white text-sm"
             style={{ background: 'linear-gradient(135deg,#42a5f5,#7c4dff)', boxShadow: '0 4px 16px rgba(66,165,245,0.3)' }}>

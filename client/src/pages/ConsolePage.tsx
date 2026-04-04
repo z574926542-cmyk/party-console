@@ -101,10 +101,26 @@ function QuickGroupModal({ players, onClose }: { players: PlayerIdentity[]; onCl
   const [balanceGender, setBalanceGender] = useState(false);
   const [balanceSocial, setBalanceSocial] = useState(false);
   const [results, setResults] = useState<number[][]>([]);
-
+  const [showIdentity, setShowIdentity] = useState(false);
+  // 筛选条件
+  const [excludeInput, setExcludeInput] = useState(''); // 排除号码，逗号分隔
+  const [rangeMin, setRangeMin] = useState(''); // 号码区间最小值
+  const [rangeMax, setRangeMax] = useState(''); // 号码区间最大值
+  // 解析排除号码列表
+  const excludeSet = new Set(
+    excludeInput.split(/[,，\s]+/).map(s => parseInt(s.trim())).filter(n => !isNaN(n))
+  );
+  // 计算实际参与分组的玩家数
+  const effectivePlayers = players.filter(p => {
+    if (excludeSet.has(p.number)) return false;
+    const min = parseInt(rangeMin); const max = parseInt(rangeMax);
+    if (!isNaN(min) && p.number < min) return false;
+    if (!isNaN(max) && p.number > max) return false;
+    return true;
+  });
   const handleGroup = () => {
-    if (players.length === 0) { toast.error('没有玩家'); return; }
-    let pool = [...players];
+    if (effectivePlayers.length === 0) { toast.error('没有符合条件的玩家'); return; }
+    let pool = [...effectivePlayers];
     if (balanceGender) {
       const males = pool.filter(p => p.gender === 'male');
       const females = pool.filter(p => p.gender === 'female');
@@ -128,7 +144,7 @@ function QuickGroupModal({ players, onClose }: { players: PlayerIdentity[]; onCl
         if (others[i]) pool.push(others[i]);
       }
     } else {
-      pool = [...players].sort(() => Math.random() - 0.5);
+      pool = [...effectivePlayers].sort(() => Math.random() - 0.5);
     }
     const groups: number[][] = Array.from({ length: groupCount }, () => []);
     pool.forEach((p, i) => groups[i % groupCount].push(p.number));
@@ -157,29 +173,81 @@ function QuickGroupModal({ players, onClose }: { players: PlayerIdentity[]; onCl
   return (
     <div className="fixed inset-0 z-50 flex flex-col" style={{ background: 'linear-gradient(135deg, oklch(0.97 0.02 280) 0%, oklch(0.94 0.04 300) 100%)' }}>
       {/* 顶部控制栏 */}
-      <div className="flex items-center justify-between px-8 py-5 border-b" style={{ borderColor: 'rgba(200,180,240,0.3)', background: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(12px)' }}>
+      <div className="flex flex-col gap-3 px-8 py-4 border-b" style={{ borderColor: 'rgba(200,180,240,0.3)', background: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(12px)' }}>
+        {/* 第一行：标题 + 分组数 + 平衡选项 + 操作按钮 */}
         <div className="flex items-center gap-6">
           <div>
             <h3 className="text-2xl font-black" style={{ color: 'oklch(0.22 0.02 280)' }}>👥 快速分组</h3>
-            <p className="text-sm mt-0.5" style={{ color: 'oklch(0.55 0.04 280)' }}>共 {players.length} 位玩家</p>
+            <p className="text-sm mt-0.5" style={{ color: 'oklch(0.55 0.04 280)' }}>
+              共 {players.length} 位玩家
+              {effectivePlayers.length !== players.length && (
+                <span style={{ color: '#7c4dff', marginLeft: 6 }}>· 筛选后 {effectivePlayers.length} 人参与</span>
+              )}
+            </p>
           </div>
           <div className="flex items-center gap-3 ml-8">
             <span className="text-sm font-semibold" style={{ color: 'oklch(0.45 0.06 280)' }}>分几组</span>
             <button onClick={() => setGroupCount(Math.max(2, groupCount - 1))} className="w-10 h-10 rounded-xl font-bold text-xl flex items-center justify-center" style={{ background: 'rgba(200,180,240,0.3)', color: 'oklch(0.45 0.06 280)' }}>-</button>
             <span className="text-3xl font-black w-12 text-center" style={{ color: 'oklch(0.22 0.02 280)', fontVariantNumeric: 'tabular-nums' }}>{groupCount}</span>
             <button onClick={() => setGroupCount(Math.min(10, groupCount + 1))} className="w-10 h-10 rounded-xl font-bold text-xl flex items-center justify-center" style={{ background: 'rgba(200,180,240,0.3)', color: 'oklch(0.45 0.06 280)' }}>+</button>
-            <span className="text-sm ml-2" style={{ color: 'oklch(0.55 0.04 280)' }}>每组约 {Math.ceil(players.length / groupCount)} 人</span>
+            <span className="text-sm ml-2" style={{ color: 'oklch(0.55 0.04 280)' }}>每组约 {Math.ceil(effectivePlayers.length / groupCount)} 人</span>
           </div>
           <div className="flex gap-5 ml-6">
             <CheckBox active={balanceGender} onToggle={() => { setBalanceGender(!balanceGender); setBalanceSocial(false); }} label="男女平衡" />
             <CheckBox active={balanceSocial} onToggle={() => { setBalanceSocial(!balanceSocial); setBalanceGender(false); }} label="社牛社恐平衡" />
           </div>
+          <div className="ml-auto flex items-center gap-3">
+            {/* 眼睛按钮：控制身份标签显示 */}
+            <button onClick={() => setShowIdentity(!showIdentity)} title={showIdentity ? '隐藏身份标签' : '显示身份标签'}
+              className="w-10 h-10 rounded-xl flex items-center justify-center text-lg transition-all"
+              style={showIdentity ? { background: 'linear-gradient(135deg,#ec407a,#7c4dff)', color: 'white', boxShadow: '0 2px 8px rgba(124,77,255,0.3)' } : { background: 'rgba(200,180,240,0.2)', color: 'oklch(0.55 0.04 280)' }}>
+              {showIdentity ? '👁' : '🙈'}
+            </button>
+            <button onClick={handleGroup} className="px-8 py-3 rounded-2xl font-bold text-white text-base" style={{ background: 'linear-gradient(135deg,#42a5f5,#7c4dff)', boxShadow: '0 4px 16px rgba(66,165,245,0.3)' }}>
+              {results.length > 0 ? '🔀 重新分组' : '▶ 开始分组'}
+            </button>
+            <button onClick={onClose} className="w-11 h-11 rounded-full flex items-center justify-center font-bold text-lg" style={{ background: 'rgba(200,180,240,0.3)', color: 'oklch(0.45 0.06 280)' }}>✕</button>
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-          <button onClick={handleGroup} className="px-8 py-3 rounded-2xl font-bold text-white text-base" style={{ background: 'linear-gradient(135deg,#42a5f5,#7c4dff)', boxShadow: '0 4px 16px rgba(66,165,245,0.3)' }}>
-            {results.length > 0 ? '🔀 重新分组' : '▶ 开始分组'}
-          </button>
-          <button onClick={onClose} className="w-11 h-11 rounded-full flex items-center justify-center font-bold text-lg" style={{ background: 'rgba(200,180,240,0.3)', color: 'oklch(0.45 0.06 280)' }}>✕</button>
+        {/* 第二行：筛选条件 */}
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold" style={{ color: 'oklch(0.45 0.06 280)' }}>排除号码</span>
+            <input
+              value={excludeInput}
+              onChange={e => setExcludeInput(e.target.value)}
+              placeholder="如：3, 7, 12"
+              className="rounded-xl px-3 py-1.5 text-sm outline-none"
+              style={{ background: 'rgba(200,180,240,0.15)', border: '1.5px solid rgba(180,160,220,0.3)', color: 'oklch(0.22 0.02 280)', width: 160 }}
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold" style={{ color: 'oklch(0.45 0.06 280)' }}>号码区间</span>
+            <input
+              value={rangeMin}
+              onChange={e => setRangeMin(e.target.value)}
+              placeholder="最小"
+              type="number"
+              className="rounded-xl px-3 py-1.5 text-sm outline-none text-center"
+              style={{ background: 'rgba(200,180,240,0.15)', border: '1.5px solid rgba(180,160,220,0.3)', color: 'oklch(0.22 0.02 280)', width: 72 }}
+            />
+            <span className="text-sm" style={{ color: 'oklch(0.55 0.04 280)' }}>—</span>
+            <input
+              value={rangeMax}
+              onChange={e => setRangeMax(e.target.value)}
+              placeholder="最大"
+              type="number"
+              className="rounded-xl px-3 py-1.5 text-sm outline-none text-center"
+              style={{ background: 'rgba(200,180,240,0.15)', border: '1.5px solid rgba(180,160,220,0.3)', color: 'oklch(0.22 0.02 280)', width: 72 }}
+            />
+          </div>
+          {(excludeInput || rangeMin || rangeMax) && (
+            <button onClick={() => { setExcludeInput(''); setRangeMin(''); setRangeMax(''); }}
+              className="text-xs px-3 py-1.5 rounded-xl"
+              style={{ background: 'rgba(255,100,100,0.1)', color: '#e57373', border: '1px solid rgba(229,115,115,0.3)' }}>
+              清除筛选
+            </button>
+          )}
         </div>
       </div>
 
@@ -203,7 +271,7 @@ function QuickGroupModal({ players, onClose }: { players: PlayerIdentity[]; onCl
                     return (
                       <div key={n} className="flex flex-col items-center gap-0.5">
                         <span className="rounded-2xl flex items-center justify-center font-black text-white" style={{ background: grads[gi % grads.length], fontSize: '1.75rem', width: '3.5rem', height: '3.5rem', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', fontVariantNumeric: 'tabular-nums' }}>{n}</span>
-                        {(hasGender || hasSocial) && (
+                        {showIdentity && (hasGender || hasSocial) && (
                           <div className="flex gap-0.5 items-center">
                             {hasGender && (
                               <span className="text-xs font-bold" style={{ color: player!.gender === 'male' ? '#42a5f5' : '#ec407a' }}>

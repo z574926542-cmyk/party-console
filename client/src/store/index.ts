@@ -154,6 +154,23 @@ function migrateWheel(w: any): Wheel {
 }
 
 // ---- 存储工具函数 ----
+
+// 同步从 localStorage 读取图片备份（img_ 前缀）
+function loadLsImageMap(): Record<string, string> {
+  const map: Record<string, string> = {};
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key?.startsWith('img_')) {
+        const id = key.slice(4);
+        const val = localStorage.getItem(key);
+        if (val) map[id] = val;
+      }
+    }
+  } catch { /* ignore */ }
+  return map;
+}
+
 export function loadState(): AppState {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -180,7 +197,7 @@ export function loadState(): AppState {
     } else {
       migratedWheels = [DEFAULT_WHEEL, DEFAULT_PUNISHMENT_WHEEL, DEFAULT_CHALLENGE_WHEEL];
     }
-    // 合并默认值，防止字段缺失
+    // 合并默认値，防止字段缺失
     // 迁移游戏分组数据
     const migratedGameGroups: GameGroup[] = Array.isArray(parsed.gameGroups)
       ? parsed.gameGroups.map((g: any) => ({
@@ -192,14 +209,55 @@ export function loadState(): AppState {
           updatedAt: g.updatedAt || Date.now(),
         }))
       : [];
+
+    // 同步注入 localStorage 图片备份，确保首屏即可显示图片
+    const lsImages = loadLsImageMap();
+    const hasImages = Object.keys(lsImages).length > 0;
+
+    const hydratedGameLibrary = hasImages
+      ? migratedGameLibrary.map(g => ({
+          ...g,
+          settlementImages: g.settlementImages.map(img =>
+            img.imageId && lsImages[img.imageId]
+              ? { ...img, dataUrl: lsImages[img.imageId] }
+              : img
+          ),
+        }))
+      : migratedGameLibrary;
+
+    const hydratedCurrentGameList = hasImages
+      ? migratedCurrentGameList.map(item => ({
+          ...item,
+          gameData: {
+            ...item.gameData,
+            settlementImages: item.gameData.settlementImages.map((img: { id: string; name: string; imageId?: string; dataUrl?: string }) =>
+              img.imageId && lsImages[img.imageId]
+                ? { ...img, dataUrl: lsImages[img.imageId] }
+                : img
+            ),
+          },
+        }))
+      : migratedCurrentGameList;
+
+    const hydratedWheels = hasImages
+      ? migratedWheels.map(w => ({
+          ...w,
+          options: w.options.map(o =>
+            (o as any).imageId && lsImages[(o as any).imageId]
+              ? { ...o, imageDataUrl: lsImages[(o as any).imageId] }
+              : o
+          ),
+        }))
+      : migratedWheels;
+
     return {
       ...INITIAL_STATE,
       ...parsed,
-      gameLibrary: migratedGameLibrary,
-      currentGameList: migratedCurrentGameList,
+      gameLibrary: hydratedGameLibrary,
+      currentGameList: hydratedCurrentGameList,
       gameGroups: migratedGameGroups,
       tags: parsed.tags && parsed.tags.length > 0 ? parsed.tags : DEFAULT_TAGS,
-      wheels: migratedWheels,
+      wheels: hydratedWheels,
       players: parsed.players && parsed.players.length > 0 ? parsed.players : INITIAL_STATE.players,
     };
   } catch {

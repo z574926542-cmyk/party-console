@@ -340,8 +340,16 @@ function RandomPickTool() {
   const [results, setResults] = useState<PlayerIdentity[]>([]);
   const [animating, setAnimating] = useState(false);
   const [displayPlayers, setDisplayPlayers] = useState<PlayerIdentity[]>([]);
+  const [showIdentity, setShowIdentity] = useState(() => {
+    try { return localStorage.getItem('toolsShowIdentity') === 'true'; } catch { return false; }
+  });
   const animRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const accent = 'oklch(0.62 0.22 10)';
+  const toggleIdentity = () => setShowIdentity(v => {
+    const next = !v;
+    try { localStorage.setItem('toolsShowIdentity', String(next)); } catch {}
+    return next;
+  });
 
   const pool = useMemo(() => {
     let players = [...state.players];
@@ -382,6 +390,14 @@ function RandomPickTool() {
           boxShadow: displayPlayers.length > 0 ? '0 0 32px oklch(0.62 0.22 10 / 0.08)' : 'none',
         }}
       >
+        {/* 眼睛开关 */}
+        {displayPlayers.length > 0 && (
+          <button onClick={toggleIdentity} title={showIdentity ? '隐藏身份标签' : '显示身份标签'}
+            className="absolute top-2 right-2 w-7 h-7 rounded-lg flex items-center justify-center text-sm transition-all z-10"
+            style={showIdentity ? { background: 'oklch(0.62 0.22 10 / 0.3)', color: accent } : { background: 'oklch(0.22 0.022 270)', color: 'oklch(0.40 0.015 270)' }}>
+            {showIdentity ? '👁' : '🙈'}
+          </button>
+        )}
         {displayPlayers.length > 0 ? (
           <div className="flex flex-wrap gap-4 justify-center p-4">
             {displayPlayers.map((p, i) => (
@@ -397,23 +413,25 @@ function RandomPickTool() {
                 >
                   {String(p.number).padStart(2, '0')}
                 </div>
-                <div className="flex gap-1">
-                  {p.gender !== 'unknown' && (
-                    <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ background: 'oklch(0.19 0.022 270)', color: 'oklch(0.60 0.02 270)' }}>
-                      {p.gender === 'male' ? '♂' : '♀'}
-                    </span>
-                  )}
-                  {p.socialType !== 'unknown' && (
-                    <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ background: 'oklch(0.19 0.022 270)', color: 'oklch(0.60 0.02 270)' }}>
-                      {p.socialType === 'introvert' ? '🌙' : '☀️'}
-                    </span>
-                  )}
-                </div>
+                {showIdentity && (
+                  <div className="flex gap-1">
+                    {p.gender !== 'unknown' && (
+                      <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ background: 'oklch(0.19 0.022 270)', color: 'oklch(0.60 0.02 270)' }}>
+                        {p.gender === 'male' ? '♂' : '♀'}
+                      </span>
+                    )}
+                    {p.socialType !== 'unknown' && (
+                      <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ background: 'oklch(0.19 0.022 270)', color: 'oklch(0.60 0.02 270)' }}>
+                        {p.socialType === 'introvert' ? '🌙' : '☀️'}
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </div>
         ) : (
-          <div className="text-sm" style={{ color: 'oklch(0.35 0.015 270)' }}>点击选人按钮</div>
+          <div className="text-sm" style={{ color: 'oklch(0.35 0.015 270)' }}>点击选人按鈕</div>
         )}
       </div>
 
@@ -492,7 +510,15 @@ function RandomGroupTool() {
   const [balanceGender, setBalanceGender] = useState(false);
   const [groups, setGroups] = useState<PlayerIdentity[][]>([]);
   const [animating, setAnimating] = useState(false);
+  const [showIdentity, setShowIdentity] = useState(() => {
+    try { return localStorage.getItem('toolsShowIdentity') === 'true'; } catch { return false; }
+  });
   const accent = 'oklch(0.78 0.16 52)';
+  const toggleIdentity = () => setShowIdentity(v => {
+    const next = !v;
+    try { localStorage.setItem('toolsShowIdentity', String(next)); } catch {}
+    return next;
+  });
 
   const pool = useMemo(() => {
     let players = [...state.players];
@@ -589,7 +615,14 @@ function RandomGroupTool() {
 
       {groups.length > 0 && (
         <div className="space-y-2">
-          <div className="text-xs font-bold tracking-widest uppercase" style={{ color: 'oklch(0.40 0.015 270)', letterSpacing: '0.1em' }}>分组结果</div>
+          <div className="flex items-center justify-between">
+            <div className="text-xs font-bold tracking-widest uppercase" style={{ color: 'oklch(0.40 0.015 270)', letterSpacing: '0.1em' }}>分组结果</div>
+            <button onClick={toggleIdentity} title={showIdentity ? '隐藏身份标签' : '显示身份标签'}
+              className="w-6 h-6 rounded-md flex items-center justify-center text-xs transition-all"
+              style={showIdentity ? { background: 'oklch(0.78 0.16 52 / 0.25)', color: accent } : { background: 'oklch(0.22 0.022 270)', color: 'oklch(0.40 0.015 270)' }}>
+              {showIdentity ? '👁' : '🙈'}
+            </button>
+          </div>
           {groups.map((group, gi) => {
             const color = GROUP_ACCENT_COLORS[gi % GROUP_ACCENT_COLORS.length];
             return (
@@ -602,8 +635,8 @@ function RandomGroupTool() {
                   {group.map(p => (
                     <span key={p.id} className="inline-flex items-center gap-0.5 font-mono-display text-sm font-bold px-2 py-0.5 rounded-lg" style={{ background: 'oklch(0.19 0.022 270)', color: 'oklch(0.82 0.008 270)', border: '1px solid oklch(0.26 0.022 270)' }}>
                       #{p.number}
-                      {p.gender !== 'unknown' && <span className="ml-0.5 text-xs" style={{ color: p.gender === 'male' ? '#64b5f6' : '#f48fb1' }}>{p.gender === 'male' ? '♂' : '♀'}</span>}
-                      {p.socialType !== 'unknown' && <span className="text-xs">{p.socialType === 'extrovert' ? '☀️' : '🌙'}</span>}
+                      {showIdentity && p.gender !== 'unknown' && <span className="ml-0.5 text-xs" style={{ color: p.gender === 'male' ? '#64b5f6' : '#f48fb1' }}>{p.gender === 'male' ? '♂' : '♀'}</span>}
+                      {showIdentity && p.socialType !== 'unknown' && <span className="text-xs">{p.socialType === 'extrovert' ? '☀️' : '🌙'}</span>}
                     </span>
                   ))}
                 </div>
