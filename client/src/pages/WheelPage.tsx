@@ -20,7 +20,7 @@ function WheelCanvas({ options, rotation }: { options: WheelOption[]; rotation: 
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    const size = 380;
+    const size = 300;
     const cx = size / 2, cy = size / 2, r = size / 2 - 8;
     ctx.clearRect(0, 0, size, size);
     if (options.length === 0) {
@@ -79,7 +79,7 @@ function WheelCanvas({ options, rotation }: { options: WheelOption[]; rotation: 
       <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1 z-10">
         <div style={{ width: 0, height: 0, borderLeft: '10px solid transparent', borderRight: '10px solid transparent', borderTop: '22px solid #ec407a', filter: 'drop-shadow(0 2px 4px rgba(236,64,122,0.5))' }} />
       </div>
-      <canvas ref={canvasRef} width={380} height={380} className="rounded-full"
+      <canvas ref={canvasRef} width={300} height={300} className="rounded-full"
         style={{ boxShadow: '0 8px 32px rgba(100,80,180,0.18), 0 2px 8px rgba(0,0,0,0.08)' }} />
     </div>
   );
@@ -572,7 +572,7 @@ export default function WheelPage() {
         {/* 轮盘 + 配置 */}
         <div className="flex-1 flex overflow-hidden">
           {/* 轮盘区 */}
-          <div className="flex-1 flex flex-col items-center justify-center p-6 gap-6">
+          <div className="flex-1 flex flex-col items-center justify-center p-4 gap-4 overflow-y-auto">
             {activeWheel.options.length > 0 ? (
               <WheelCanvas options={activeWheel.options} rotation={rotation} />
             ) : (
