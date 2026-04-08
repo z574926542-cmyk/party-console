@@ -13,6 +13,67 @@ import { saveImage as saveImageToStore, deleteImage as deleteImageFromStore, com
 import type { Game, BoundTool, PlayerIdentity } from '@/types';
 
 // ============================================================
+// 选人结果全屏展示
+// ============================================================
+function PickResultFullscreen({ results, players, onRepick, onClose }: {
+  results: number[];
+  players: PlayerIdentity[];
+  onRepick: () => void;
+  onClose: () => void;
+}) {
+  const total = results.length;
+  const boxSize = total <= 4 ? '9rem' : total <= 8 ? '7rem' : total <= 16 ? '5.5rem' : '4rem';
+  const fontSize = total <= 4 ? '4rem' : total <= 8 ? '3rem' : total <= 16 ? '2.2rem' : '1.6rem';
+  return (
+    <div
+      className="fixed inset-0 z-[200] flex flex-col"
+      style={{ background: 'linear-gradient(135deg, oklch(0.14 0.03 280) 0%, oklch(0.10 0.04 290) 100%)' }}
+    >
+      <div className="flex items-center justify-between px-8 py-4 shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+        <div className="flex items-center gap-3">
+          <span className="text-2xl font-black text-white">选人结果</span>
+          <span className="text-sm px-3 py-1 rounded-full font-medium" style={{ background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)' }}>
+            共选出 {total} 位玩家
+          </span>
+        </div>
+        <div className="flex items-center gap-3">
+          <button onClick={onRepick} className="px-5 py-2 rounded-xl font-bold text-sm"
+            style={{ background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.8)', border: '1px solid rgba(255,255,255,0.15)' }}>
+            重新随机
+          </button>
+          <button onClick={onClose} className="px-5 py-2 rounded-xl font-bold text-sm text-white"
+            style={{ background: 'linear-gradient(135deg,#ec407a,#7c4dff)' }}>
+            关闭
+          </button>
+        </div>
+      </div>
+      <div className="flex-1 flex items-center justify-center p-8">
+        <div className="flex flex-wrap gap-6 items-center justify-center">
+          {results.map(n => (
+            <div
+              key={n}
+              className="flex items-center justify-center font-black rounded-3xl"
+              style={{
+                background: 'linear-gradient(135deg,#ec407a,#7c4dff)',
+                color: '#fff',
+                fontFamily: '"DIN Alternate", "Bebas Neue", "Barlow", monospace',
+                fontSize,
+                width: boxSize,
+                height: boxSize,
+                boxShadow: '0 8px 32px rgba(236,64,122,0.4)',
+                letterSpacing: '-0.02em',
+              }}
+            >
+              {n}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
 // 工具弹窗 - 快速选人
 // ============================================================
 function QuickPickModal({ players, onClose }: { players: PlayerIdentity[]; onClose: () => void }) {
@@ -20,6 +81,7 @@ function QuickPickModal({ players, onClose }: { players: PlayerIdentity[]; onClo
   const [genderSet, setGenderSet] = useState<Set<string>>(new Set());
   const [socialSet, setSocialSet] = useState<Set<string>>(new Set());
   const [results, setResults] = useState<number[]>([]);
+  const [showFullscreen, setShowFullscreen] = useState(false);
   const [excludeInput, setExcludeInput] = useState('');
   const [rangeMin, setRangeMin] = useState('');
   const [rangeMax, setRangeMax] = useState('');
@@ -42,12 +104,26 @@ function QuickPickModal({ players, onClose }: { players: PlayerIdentity[]; onClo
     return true;
   });
 
-  const handlePick = () => {
+  const doPick = () => {
     if (eligible.length === 0) { toast.error('没有符合条件的玩家'); return; }
     const shuffled = [...eligible].sort(() => Math.random() - 0.5);
     const picked = shuffled.slice(0, Math.min(count, shuffled.length)).map(p => p.number).sort((a, b) => a - b);
     setResults(picked);
+    setShowFullscreen(true);
   };
+
+  const handlePick = doPick;
+
+  if (showFullscreen && results.length > 0) {
+    return (
+      <PickResultFullscreen
+        results={results}
+        players={players}
+        onRepick={doPick}
+        onClose={() => { setShowFullscreen(false); onClose(); }}
+      />
+    );
+  }
 
   const FBtn = ({ active, onClick, children, grad }: { active: boolean; onClick: () => void; children: React.ReactNode; grad: string }) => (
     <button onClick={onClick} className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-150"
