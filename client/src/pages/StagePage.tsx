@@ -802,7 +802,7 @@ export default function StagePage() {
           <div className="max-w-3xl mx-auto space-y-5">
             {/* 游戏标题 */}
             <div className="text-center py-4">
-              <div className="text-6xl font-black mb-3" style={{ color: 'oklch(0.15 0.02 280)', letterSpacing: '-0.03em', lineHeight: '1.1' }}>
+              <div className="text-7xl font-black mb-3" style={{ color: 'oklch(0.15 0.02 280)', letterSpacing: '-0.03em', lineHeight: '1.1' }}>
                 {showNames ? currentGame.name : `游戏 ${currentIndex + 1}`}
               </div>
               {currentGame.tags.length > 0 && (
@@ -811,7 +811,7 @@ export default function StagePage() {
                     const tag = state.tags.find(t => t.id === tagId);
                     if (!tag) return null;
                     return (
-                      <span key={tagId} className="px-2.5 py-0.5 rounded-full text-xs font-bold"
+                      <span key={tagId} className="px-3 py-1 rounded-full text-base font-bold"
                         style={{ background: tag.color + '22', color: tag.color, border: `1.5px solid ${tag.color}44` }}>
                         {tag.name}
                       </span>
@@ -824,8 +824,8 @@ export default function StagePage() {
             {/* 游戏规则 */}
             {currentGame.rules && (
               <div className="glass-card p-5">
-                <div className="text-base font-black uppercase tracking-widest mb-5" style={{ color: 'oklch(0.55 0.06 280)', letterSpacing: '0.15em' }}>游戏规则</div>
-                <p className="text-3xl leading-relaxed whitespace-pre-wrap font-bold" style={{ color: 'oklch(0.15 0.02 280)', letterSpacing: '0.01em' }}>
+                <div className="text-xl font-black uppercase tracking-widest mb-5" style={{ color: 'oklch(0.55 0.06 280)', letterSpacing: '0.15em' }}>游戏规则</div>
+                <p className="text-5xl leading-relaxed whitespace-pre-wrap font-bold" style={{ color: 'oklch(0.15 0.02 280)', letterSpacing: '0.01em' }}>
                   {currentGame.rules}
                 </p>
               </div>
@@ -837,7 +837,7 @@ export default function StagePage() {
               <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, rgba(102,187,106,0.12), rgba(38,198,218,0.08))', border: '2px solid rgba(102,187,106,0.35)' }}>
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <span className="text-base font-black" style={{ color: '#2e7d32' }}>🏆 胜者 · 周边奖励</span>
+                    <span className="text-2xl font-black" style={{ color: '#2e7d32' }}>🏆 胜者 · 周边奖励</span>
                   </div>
                   <button
                     onClick={() => setActiveModal({ type: 'settle', settlement: 'winner' })}
@@ -847,7 +847,7 @@ export default function StagePage() {
                   </button>
                 </div>
                 {currentGame.winnerSettlement && (
-                  <p className="text-2xl font-black mt-2 leading-snug" style={{ color: 'oklch(0.20 0.08 155)' }}>{currentGame.winnerSettlement}</p>
+                  <p className="text-4xl font-black mt-2 leading-snug" style={{ color: 'oklch(0.20 0.08 155)' }}>{currentGame.winnerSettlement}</p>
                 )}
               </div>
 
@@ -855,7 +855,7 @@ export default function StagePage() {
               <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, rgba(244,143,177,0.12), rgba(206,147,216,0.08))', border: '2px solid rgba(244,143,177,0.35)' }}>
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <span className="text-base font-black" style={{ color: '#b71c1c' }}>💧 败者 · 惩罚</span>
+                    <span className="text-2xl font-black" style={{ color: '#b71c1c' }}>💧 败者 · 惩罚</span>
                   </div>
                   <button
                     onClick={() => setActiveModal({ type: 'settle', settlement: 'loser' })}
@@ -865,7 +865,7 @@ export default function StagePage() {
                   </button>
                 </div>
                 {currentGame.loserSettlement && (
-                  <p className="text-2xl font-black mt-2 leading-snug" style={{ color: 'oklch(0.25 0.10 340)' }}>{currentGame.loserSettlement}</p>
+                  <p className="text-4xl font-black mt-2 leading-snug" style={{ color: 'oklch(0.25 0.10 340)' }}>{currentGame.loserSettlement}</p>
                 )}
               </div>
             </div>
@@ -887,7 +887,7 @@ export default function StagePage() {
                           <span className="text-white text-xl">&#128269;</span>
                         </div>
                       </div>
-                      <span className="text-xs font-semibold" style={{ color: 'oklch(0.40 0.04 280)' }}>{img.name}</span>
+                      <span className="text-sm font-semibold" style={{ color: 'oklch(0.40 0.04 280)' }}>{img.name}</span>
                     </div>
                   ))}
                 </div>
@@ -905,7 +905,7 @@ export default function StagePage() {
                     const emoji = toolEmoji[key] || '⚡';
                     return (
                       <button key={tool.id} onClick={() => openToolModal(tool)}
-                        className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-white transition-all"
+                        className="flex items-center gap-2 px-5 py-3 rounded-xl text-xl font-bold text-white transition-all"
                         style={{ background: grad, boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
                         {emoji} {tool.label}
                       </button>
@@ -916,10 +916,10 @@ export default function StagePage() {
             )}
 
             {/* 主持人备注 */}
-            {currentGame.notes && (
+              {currentGame.notes && (
               <div className="rounded-2xl p-4" style={{ background: 'rgba(255,255,255,0.4)', border: '1.5px dashed rgba(200,180,240,0.35)' }}>
                 <div className="section-label mb-1">主持人备注</div>
-                <p className="text-sm" style={{ color: 'oklch(0.45 0.04 280)' }}>{currentGame.notes}</p>
+                <p className="text-2xl" style={{ color: 'oklch(0.45 0.04 280)' }}>{currentGame.notes}</p>
               </div>
             )}
           </div>

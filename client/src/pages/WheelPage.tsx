@@ -58,7 +58,7 @@ function WheelCanvas({ options, rotation }: { options: WheelOption[]; rotation: 
       ctx.save(); ctx.translate(cx, cy); ctx.rotate(midAngle);
       ctx.translate(r * 0.58, 0);
       ctx.fillStyle = 'white';
-      ctx.font = `bold ${Math.max(10, Math.min(14, 200 / options.length))}px sans-serif`;
+      ctx.font = `bold ${Math.max(14, Math.min(22, 280 / options.length))}px sans-serif`;
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.shadowColor = 'rgba(0,0,0,0.4)'; ctx.shadowBlur = 3;
       const lbl = opt.label.length > 6 ? opt.label.slice(0, 6) + '…' : opt.label;
@@ -598,17 +598,17 @@ export default function WheelPage() {
             </div>
             {activeWheel.history.length > 0 && (
               <div className="w-full max-w-md">
-                <div className="text-xs font-bold mb-2 px-1" style={{ color: 'oklch(0.55 0.04 280)' }}>最近记录</div>
-                <div className="space-y-1.5 max-h-32 overflow-y-auto">
+                <div className="text-base font-bold mb-2 px-1" style={{ color: 'oklch(0.55 0.04 280)' }}>最近记录</div>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
                   {activeWheel.history.slice(0, 5).map(h => (
-                    <div key={h.id} className="flex items-center gap-2.5 px-3 py-2 rounded-xl"
+                    <div key={h.id} className="flex items-center gap-3 px-4 py-3 rounded-xl"
                       style={{ background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(200,180,240,0.2)' }}>
-                      <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: h.optionColor }} />
-                      <span className="text-sm font-semibold flex-1" style={{ color: 'oklch(0.30 0.04 280)' }}>{h.optionLabel}</span>
-                      {h.playerNumbers.length > 0 && <span className="text-xs" style={{ color: 'oklch(0.55 0.04 280)' }}>{h.playerNumbers.slice(0, 3).join(', ')}{h.playerNumbers.length > 3 ? '…' : ''}</span>}
-                      {h.isPeripheral && <span className="text-xs" style={{ color: '#f59e0b' }}>★</span>}
-                      {h.isPenalty && <span className="text-xs" style={{ color: '#ef4444' }}>⚡</span>}
-                      <span className="text-xs flex-shrink-0" style={{ color: 'oklch(0.65 0.02 280)' }}>
+                      <div className="w-4 h-4 rounded-full flex-shrink-0" style={{ background: h.optionColor }} />
+                      <span className="text-xl font-semibold flex-1" style={{ color: 'oklch(0.30 0.04 280)' }}>{h.optionLabel}</span>
+                      {h.playerNumbers.length > 0 && <span className="text-base" style={{ color: 'oklch(0.55 0.04 280)' }}>{h.playerNumbers.slice(0, 3).join(', ')}{h.playerNumbers.length > 3 ? '…' : ''}</span>}
+                      {h.isPeripheral && <span className="text-base" style={{ color: '#f59e0b' }}>★</span>}
+                      {h.isPenalty && <span className="text-base" style={{ color: '#ef4444' }}>⚡</span>}
+                      <span className="text-sm flex-shrink-0" style={{ color: 'oklch(0.65 0.02 280)' }}>
                         {new Date(h.timestamp).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>
@@ -634,27 +634,27 @@ export default function WheelPage() {
                       className="w-36 h-36 rounded-2xl object-cover"
                       style={{ border: `3px solid ${resultOption.color}`, boxShadow: `0 8px 24px ${resultOption.color}44` }} />
                   )}
-                  <div className="text-4xl font-black text-center leading-tight" style={{ color: resultOption.color }}>
+                  <div className="text-6xl font-black text-center leading-tight" style={{ color: resultOption.color }}>
                     {resultOption.label}
                   </div>
                   {resultOption.isPeripheral && (
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold"
+                    <div className="flex items-center gap-1.5 px-4 py-2 rounded-full text-base font-bold"
                       style={{ background: 'rgba(245,158,11,0.12)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.3)' }}>
                       ★ 已同步至结算清单（周边奖励）
                     </div>
                   )}
                   {resultOption.isPenalty && (
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold"
+                    <div className="flex items-center gap-1.5 px-4 py-2 rounded-full text-base font-bold"
                       style={{ background: 'rgba(239,68,68,0.08)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.25)' }}>
                       ⚡ 已同步至结算清单（惩罚）
                     </div>
                   )}
                   {resultPlayers.length > 0 && (
                     <div className="w-full">
-                      <div className="text-xs font-semibold mb-2 text-center" style={{ color: 'oklch(0.55 0.04 280)' }}>参与玩家</div>
+                      <div className="text-base font-semibold mb-2 text-center" style={{ color: 'oklch(0.55 0.04 280)' }}>参与玩家</div>
                       <div className="flex flex-wrap gap-2 justify-center">
                         {resultPlayers.map(n => (
-                          <span key={n} className="w-9 h-9 rounded-xl flex items-center justify-center font-black text-white text-sm"
+                          <span key={n} className="w-14 h-14 rounded-xl flex items-center justify-center font-black text-white text-2xl"
                             style={{ background: 'linear-gradient(135deg,#ec407a,#7c4dff)' }}>{n}</span>
                         ))}
                       </div>
@@ -714,13 +714,13 @@ export default function WheelPage() {
               style={{ background: `${resultOption.color}22`, color: resultOption.color, border: `1.5px solid ${resultOption.color}66` }}>
               🎯 抽中结果
             </div>
-            <div className="text-4xl font-black" style={{ color: resultOption.color, textShadow: `0 0 32px ${resultOption.color}88` }}>
+            <div className="text-7xl font-black" style={{ color: resultOption.color, textShadow: `0 0 32px ${resultOption.color}88` }}>
               {resultOption.label}
             </div>
             {resultPlayers.length > 0 && (
               <div className="flex gap-2 justify-center mt-3">
                 {resultPlayers.map(n => (
-                  <span key={n} className="w-10 h-10 rounded-xl flex items-center justify-center font-black text-white text-base"
+                  <span key={n} className="w-20 h-20 rounded-xl flex items-center justify-center font-black text-white text-4xl"
                     style={{ background: 'linear-gradient(135deg,#ec407a,#7c4dff)' }}>{n}</span>
                 ))}
               </div>

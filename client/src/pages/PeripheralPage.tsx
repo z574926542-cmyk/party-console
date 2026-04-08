@@ -317,9 +317,9 @@ export default function PeripheralPage() {
           <div className="rounded-2xl overflow-hidden"
             style={{ background: 'rgba(255,255,255,0.65)', border: '1px solid rgba(200,180,240,0.2)', boxShadow: '0 4px 20px rgba(100,80,180,0.06)' }}>
             {/* 表头 */}
-            <div className="grid text-xs font-bold px-4 py-3"
+            <div className="grid text-sm font-bold px-4 py-4"
               style={{
-                gridTemplateColumns: '36px 44px 56px 80px 1fr 110px 80px 80px 36px',
+                gridTemplateColumns: '40px 56px 72px 100px 1fr 130px 90px 90px 40px',
                 background: 'rgba(200,180,240,0.12)',
                 borderBottom: '1px solid rgba(200,180,240,0.2)',
                 color: 'oklch(0.50 0.06 280)'
@@ -342,9 +342,9 @@ export default function PeripheralPage() {
                 : isReward ? 'rgba(232,245,233,0.5)' : 'rgba(252,228,236,0.5)';
               return (
                 <div key={record.id}
-                  className="grid items-center px-4 py-2 transition-all"
+                  className="grid items-center px-4 py-3 transition-all"
                   style={{
-                    gridTemplateColumns: '36px 44px 56px 80px 1fr 110px 80px 80px 36px',
+                    gridTemplateColumns: '40px 56px 72px 100px 1fr 130px 90px 90px 40px',
                     opacity: record.completed ? 0.6 : 1,
                     borderBottom: '1px solid rgba(200,180,240,0.1)',
                     background: rowBg,
@@ -362,7 +362,7 @@ export default function PeripheralPage() {
                     </button>
                   </div>
                   {/* 序号 */}
-                  <div className="text-xs font-bold text-center" style={{ color: 'oklch(0.55 0.04 280)' }}>
+                  <div className="text-base font-bold text-center" style={{ color: 'oklch(0.55 0.04 280)' }}>
                     {record.serialNumber}
                   </div>
                   {/* 玩家号 */}
@@ -370,14 +370,14 @@ export default function PeripheralPage() {
                     value={record.playerNumber > 0 ? String(record.playerNumber) : ''}
                     onChange={v => handleUpdate(record.id, { playerNumber: parseInt(v) || 0 })}
                     placeholder="号" type="number"
-                    className="text-center font-black"
+                    className="text-center font-black text-2xl"
                     style={{ color: isReward ? '#2e7d32' : '#b71c1c', textDecoration: record.completed ? 'line-through' : 'none' }}
                   />
                   {/* 分类标签 */}
                   <div>
                     <button
                       onClick={() => handleUpdate(record.id, { category: isReward ? 'penalty' : 'reward' })}
-                      className="px-2 py-0.5 rounded-full text-xs font-bold transition-all"
+                      className="px-2 py-1 rounded-full text-sm font-bold transition-all"
                       style={isReward
                         ? { background: 'linear-gradient(135deg,#66bb6a,#26c6da)', color: 'white' }
                         : { background: 'linear-gradient(135deg,#f48fb1,#ce93d8)', color: 'white' }
@@ -391,25 +391,25 @@ export default function PeripheralPage() {
                     value={record.title ?? ''}
                     onChange={v => handleUpdate(record.id, { title: v })}
                     placeholder="点击填写结算内容…"
-                    style={{ color: 'oklch(0.25 0.02 280)', fontWeight: '600', textDecoration: record.completed ? 'line-through' : 'none' }}
+                    style={{ color: 'oklch(0.25 0.02 280)', fontWeight: '700', fontSize: '1.2rem', textDecoration: record.completed ? 'line-through' : 'none' }}
                   />
                   {/* 备注 */}
                   <InlineCell
                     value={record.notes ?? ''}
                     onChange={v => handleUpdate(record.id, { notes: v })}
                     placeholder="备注…"
-                    style={{ color: 'oklch(0.50 0.04 280)', fontSize: '0.8rem' }}
+                    style={{ color: 'oklch(0.50 0.04 280)', fontSize: '1rem' }}
                   />
                   {/* 来源 */}
                   <div>
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold"
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-sm font-semibold"
                       style={{ background: 'rgba(200,180,240,0.2)', color: 'oklch(0.50 0.04 280)' }}>
                       {SOURCE_LABELS[record.source] ?? record.source}
                     </span>
                   </div>
                   {/* 状态 */}
                   <div>
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold"
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-sm font-semibold"
                       style={record.completed
                         ? { background: 'rgba(102,187,106,0.12)', color: '#2e7d32', border: '1px solid rgba(102,187,106,0.3)' }
                         : { background: 'rgba(245,158,11,0.12)', color: '#b45309', border: '1px solid rgba(245,158,11,0.3)' }}>
