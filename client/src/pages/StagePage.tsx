@@ -123,7 +123,7 @@ function RandomPickModal({ players, onClose }: { players: PlayerIdentity[]; onCl
   const handlePick = () => {
     if (eligible.length === 0) { toast.error('没有符合条件的玩家'); return; }
     const shuffled = [...eligible].sort(() => Math.random() - 0.5);
-    setResults(shuffled.slice(0, Math.min(count, shuffled.length)).map(p => p.number));
+    setResults(shuffled.slice(0, Math.min(count, shuffled.length)).map(p => p.number).sort((a, b) => a - b));
   };
 
   const FBtn = ({ active, onClick, children, grad }: { active: boolean; onClick: () => void; children: React.ReactNode; grad: string }) => (
@@ -415,9 +415,9 @@ function GroupModal({ players, onClose }: { players: PlayerIdentity[]; onClose: 
     }
     const groups: number[][] = Array.from({ length: groupCount }, () => []);
     pool.forEach((p, i) => groups[i % groupCount].push(p.number));
+    groups.forEach(g => g.sort((a, b) => a - b));
     return groups;
   };
-
   const handleGroup = () => {
     const groups = doGroup();
     if (!groups) return;

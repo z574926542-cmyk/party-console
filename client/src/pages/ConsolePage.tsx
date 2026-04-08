@@ -45,7 +45,7 @@ function QuickPickModal({ players, onClose }: { players: PlayerIdentity[]; onClo
   const handlePick = () => {
     if (eligible.length === 0) { toast.error('没有符合条件的玩家'); return; }
     const shuffled = [...eligible].sort(() => Math.random() - 0.5);
-    const picked = shuffled.slice(0, Math.min(count, shuffled.length)).map(p => p.number);
+    const picked = shuffled.slice(0, Math.min(count, shuffled.length)).map(p => p.number).sort((a, b) => a - b);
     setResults(picked);
   };
 
@@ -226,6 +226,7 @@ function QuickGroupModal({ players, onClose }: { players: PlayerIdentity[]; onCl
     }
     const groups: number[][] = Array.from({ length: groupCount }, () => []);
     pool.forEach((p, i) => groups[i % groupCount].push(p.number));
+    groups.forEach(g => g.sort((a, b) => a - b));
     setResults(groups);
   };
   const grads = [

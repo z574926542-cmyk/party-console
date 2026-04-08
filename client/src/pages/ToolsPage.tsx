@@ -137,7 +137,7 @@ function RandomNumberTool() {
       setDisplayNums(Array.from({ length: actualCount }, () => availablePool[Math.floor(Math.random() * availablePool.length)]));
       if (ticks >= 18) {
         clearInterval(animRef.current!);
-        const final = [...availablePool].sort(() => Math.random() - 0.5).slice(0, actualCount);
+        const final = [...availablePool].sort(() => Math.random() - 0.5).slice(0, actualCount).sort((a, b) => a - b);
         setResults(final);
         setDisplayNums(final);
         if (excludeUsed) setUsedNumbers(prev => [...prev, ...final]);
@@ -383,7 +383,7 @@ function RandomPickTool() {
       setDisplayPlayers(Array.from({ length: actualCount }, () => pool[Math.floor(Math.random() * pool.length)]));
       if (ticks >= 16) {
         clearInterval(animRef.current!);
-        const final = [...pool].sort(() => Math.random() - 0.5).slice(0, actualCount);
+        const final = [...pool].sort(() => Math.random() - 0.5).slice(0, actualCount).sort((a, b) => a.number - b.number);
         setResults(final);
         setDisplayPlayers(final);
         if (excludePicked) setPickedHistory(prev => [...prev, ...final.map(p => p.number)]);
@@ -639,6 +639,7 @@ function RandomGroupTool() {
       }
       const result: PlayerIdentity[][] = Array.from({ length: groupCount }, () => []);
       players.forEach((p, i) => result[i % groupCount].push(p));
+      result.forEach(g => g.sort((a, b) => a.number - b.number));
       setGroups(result);
       setAnimating(false);
     }, 600);
