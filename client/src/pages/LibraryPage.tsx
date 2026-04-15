@@ -644,16 +644,20 @@ export default function LibraryPage() {
     toast.success('分组已删除');
   };
 
-  const handleExportGroup = (group: GameGroup) => {
-    const json = exportSingleGroup(group);
-    const blob = new Blob([json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${group.name.replace(/[/\\?%*:|"<>]/g, '_')}.group.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success(`「${group.name}」已导出为JSON`);
+  const handleExportGroup = async (group: GameGroup) => {
+    try {
+      const json = await exportSingleGroup(group, state);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${group.name.replace(/[/\\?%*:|"<>]/g, '_')}.group.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(`「${group.name}」已导出为JSON（包含游戏完整数据）`);
+    } catch (err) {
+      toast.error('导出失败，请重试');
+    }
   };
 
   const handleImportGroupFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -664,8 +668,15 @@ export default function LibraryPage() {
       const json = ev.target?.result as string;
       const parsed = parseGroupJSON(json);
       if (!parsed || parsed.length === 0) { toast.error('文件格式不正确，无法解析分组数据'); return; }
-      parsed.forEach(g => dispatch({ type: 'ADD_GAME_GROUP', payload: g }));
-      toast.success(`已导入 ${parsed.length} 个分组`);
+      // 先将内嵌的游戏数据写入库（如果有）
+      const allEmbeddedGames: Game[] = parsed.flatMap(r => r.games || []);
+      if (allEmbeddedGames.length > 0) {
+        dispatch({ type: 'UPSERT_GAMES_TO_LIBRARY', payload: allEmbeddedGames });
+      }
+      // 再导入分组
+      parsed.forEach(r => dispatch({ type: 'ADD_GAME_GROUP', payload: r.group }));
+      const gameCount = allEmbeddedGames.length;
+      toast.success(`已导入 ${parsed.length} 个分组${gameCount > 0 ? `，并写入 ${gameCount} 个游戏到库` : ''}`);
     };
     reader.readAsText(file);
     e.target.value = '';

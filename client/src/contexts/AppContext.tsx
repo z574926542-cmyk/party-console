@@ -27,7 +27,7 @@ import {
   removeGameGroup,
   loadGroupToCurrentList,
 } from '../store';
-import { loadAllImages } from '../lib/imageStore';
+import { loadAllImages, saveImage } from '../lib/imageStore';
 import { nanoid } from 'nanoid';
 
 // ---- Action Types ----
@@ -70,7 +70,8 @@ type Action =
   | { type: 'ADD_GAME_GROUP'; payload: GameGroup }
   | { type: 'UPDATE_GAME_GROUP'; payload: GameGroup }
   | { type: 'REMOVE_GAME_GROUP'; payload: string }
-  | { type: 'LOAD_GROUP_TO_LIST'; payload: string }; // groupId
+  | { type: 'LOAD_GROUP_TO_LIST'; payload: string } // groupId
+  | { type: 'UPSERT_GAMES_TO_LIBRARY'; payload: Game[] }; // 批量写入游戏到库（已存在则覆盖）
 
 function reducer(state: AppState, action: Action): AppState {
   let newState: AppState;
@@ -191,6 +192,40 @@ function reducer(state: AppState, action: Action): AppState {
     case 'LOAD_GROUP_TO_LIST':
       newState = loadGroupToCurrentList(state, action.payload);
       break;
+    case 'UPSERT_GAMES_TO_LIBRARY': {
+      // 批量将游戏写入库，已存在则按名称覆盖
+      // 同时将游戏结算图片的 base64 dataUrl 写入 IndexedDB
+      const games = action.payload;
+      // 异步写入图片（不阻塞 reducer）
+      games.forEach(game => {
+        game.settlementImages?.forEach(img => {
+          if (img.dataUrl && img.imageId) {
+            saveImage(img.imageId, img.dataUrl).catch(() => {});
+            // 同时写入 localStorage 备份
+            try { localStorage.setItem(`img_${img.imageId}`, img.dataUrl); } catch { /* ignore */ }
+          } else if (img.dataUrl && !img.imageId) {
+            // 没有 imageId 则生成一个
+            const newId = `img_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+            (img as any).imageId = newId;
+            saveImage(newId, img.dataUrl).catch(() => {});
+            try { localStorage.setItem(`img_${newId}`, img.dataUrl); } catch { /* ignore */ }
+          }
+        });
+      });
+      // 将游戏写入库（同名覆盖）
+      let updatedLibrary = [...state.gameLibrary];
+      for (const game of games) {
+        const existingIdx = updatedLibrary.findIndex(g => g.name === game.name);
+        const gameToStore = { ...game, id: existingIdx >= 0 ? updatedLibrary[existingIdx].id : (game.id || nanoid()), updatedAt: Date.now() };
+        if (existingIdx >= 0) {
+          updatedLibrary[existingIdx] = gameToStore;
+        } else {
+          updatedLibrary = [...updatedLibrary, gameToStore];
+        }
+      }
+      newState = { ...state, gameLibrary: updatedLibrary };
+      break;
+    }
     default:
       return state;
   }

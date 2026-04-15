@@ -645,42 +645,107 @@ export function loadGroupToCurrentList(state: AppState, groupId: string): AppSta
   return { ...state, currentGameList: [...state.currentGameList, ...newItems] };
 }
 
-// 导出单个游戏组为 JSON
-export function exportSingleGroup(group: GameGroup): string {
-  return JSON.stringify({ version: 1, type: 'game-group-template', group }, null, 2);
+// 导出单个游戏组为 JSON（异步，内嵌每个游戏的完整数据和图片 base64）
+export async function exportSingleGroup(group: GameGroup, state: AppState): Promise<string> {
+  const gamesWithImages: Game[] = [];
+  for (const gameName of group.gameNames) {
+    const game = state.gameLibrary.find(g => g.name === gameName);
+    if (!game) continue;
+    const imagesWithData = await Promise.all(
+      (game.settlementImages || []).map(async (img: SettlementImage) => {
+        if (img.dataUrl) return img;
+        if (img.imageId) {
+          try { const d = await loadImage(img.imageId); return { ...img, dataUrl: d || undefined }; }
+          catch { return img; }
+        }
+        return img;
+      })
+    );
+    gamesWithImages.push({ ...game, settlementImages: imagesWithData });
+  }
+  return JSON.stringify({ version: 2, type: 'game-group-template', group, games: gamesWithImages }, null, 2);
 }
 
-// 导出所有游戏组为 JSON
-export function exportAllGroups(state: AppState): string {
-  return JSON.stringify({ version: 1, type: 'game-groups-all', groups: state.gameGroups }, null, 2);
+// 导出所有游戏组为 JSON（异步，内嵌每个游戏完整数据）
+export async function exportAllGroups(state: AppState): Promise<string> {
+  const groupsWithGames = await Promise.all(
+    state.gameGroups.map(async (group) => {
+      const gamesWithImages: Game[] = [];
+      for (const gameName of group.gameNames) {
+        const game = state.gameLibrary.find(g => g.name === gameName);
+        if (!game) continue;
+        const imagesWithData = await Promise.all(
+          (game.settlementImages || []).map(async (img: SettlementImage) => {
+            if (img.dataUrl) return img;
+            if (img.imageId) {
+              try { const d = await loadImage(img.imageId); return { ...img, dataUrl: d || undefined }; }
+              catch { return img; }
+            }
+            return img;
+          })
+        );
+        gamesWithImages.push({ ...game, settlementImages: imagesWithData });
+      }
+      return { group, games: gamesWithImages };
+    })
+  );
+  return JSON.stringify({ version: 2, type: 'game-groups-all', groupsWithGames }, null, 2);
 }
 
-// 解析游戏组 JSON（支持单组和多组格式）
-export function parseGroupJSON(json: string): GameGroup[] {
+// 解析结果类型：包含分组和内嵌游戏数据
+export interface ParsedGroupResult {
+  group: GameGroup;
+  games: Game[]; // v2 内嵌的完整游戏数据（v1 旧格式为空数组）
+}
+
+// 解析游戏组 JSON（支持 v1 旧格式和 v2 内嵌游戏格式）
+export function parseGroupJSON(json: string): ParsedGroupResult[] {
   try {
     const data = JSON.parse(json);
-    // 多组格式
-    if (Array.isArray(data.groups)) {
-      return data.groups.map((g: any) => ({
+    const toGame = (g: any): Game => ({
+      id: nanoid(),
+      name: g.name || '',
+      rules: g.rules || '',
+      winnerSettlement: g.winnerSettlement || '',
+      loserSettlement: g.loserSettlement || '',
+      settlementImages: Array.isArray(g.settlementImages) ? g.settlementImages : [],
+      tools: Array.isArray(g.tools) ? g.tools : [],
+      tags: Array.isArray(g.tags) ? g.tags : [],
+      notes: g.notes || '',
+      createdAt: g.createdAt || Date.now(),
+      updatedAt: Date.now(),
+    });
+    const toResult = (rawGroup: any, games: Game[]): ParsedGroupResult => ({
+      group: {
         id: nanoid(),
-        name: g.name || '导入分组',
-        gameNames: Array.isArray(g.gameNames) ? g.gameNames : [],
-        notes: g.notes || '',
+        name: rawGroup.name || '导入分组',
+        gameNames: games.length > 0 ? games.map(gm => gm.name) : (Array.isArray(rawGroup.gameNames) ? rawGroup.gameNames : []),
+        notes: rawGroup.notes || '',
         createdAt: Date.now(),
         updatedAt: Date.now(),
-      }));
+      },
+      games,
+    });
+    // v2 多组格式
+    if (Array.isArray(data.groupsWithGames)) {
+      return data.groupsWithGames.map((item: any) => {
+        const games = Array.isArray(item.games) ? item.games.map(toGame) : [];
+        return toResult(item.group || {}, games);
+      });
     }
-    // 单组格式
+    // v2 单组格式
+    if (data.games && data.group) {
+      const games = Array.isArray(data.games) ? data.games.map(toGame) : [];
+      return [toResult(data.group, games)];
+    }
+    // v1 多组格式（旧版，无内嵌游戏）
+    if (Array.isArray(data.groups)) {
+      return data.groups.map((g: any) => toResult(g, []));
+    }
+    // v1 单组格式
     const raw = data.group || data;
     if (!raw || !raw.name) return [];
-    return [{
-      id: nanoid(),
-      name: raw.name || '导入分组',
-      gameNames: Array.isArray(raw.gameNames) ? raw.gameNames : [],
-      notes: raw.notes || '',
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    }];
+    return [toResult(raw, [])];
   } catch {
     return [];
   }
