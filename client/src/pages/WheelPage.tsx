@@ -3,6 +3,7 @@
 // 可折叠配置面板，选人并开始，周边/惩罚属性自动同步结算清单
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useLocation } from 'wouter';
 import { useApp } from '@/contexts/AppContext';
 import { nanoid } from 'nanoid';
 import { toast } from 'sonner';
@@ -264,7 +265,12 @@ export default function WheelPage() {
   const customWheels = state.wheels.filter(w => !DEFAULT_IDS.includes(w.id));
   const allWheels = [...defaultWheels, ...customWheels];
 
-  const [activeWheelId, setActiveWheelId] = useState<string>(DEFAULT_IDS[0]);
+  // 支持从 navigation state 传入目标 wheelId
+  const getNavWheelId = () => { try { return (window.history.state as { wheelId?: string })?.wheelId || ''; } catch { return ''; } };
+  const [activeWheelId, setActiveWheelId] = useState<string>(() => getNavWheelId() || DEFAULT_IDS[0]);
+  const [_location] = useLocation();
+  // 路由切换时（从展台页跳转）同步更新活跃轮盘
+  useEffect(() => { const id = getNavWheelId(); if (id) setActiveWheelId(id); }, [_location]);
   const [showWheelList, setShowWheelList] = useState(true);
   const [showConfig, setShowConfig] = useState(false);
   const [spinning, setSpinning] = useState(false);
