@@ -800,10 +800,11 @@ export default function StagePage() {
       else if (tool.toolType === 'random-group') setActiveModal('group');
       else if (tool.toolType === 'countdown') setActiveModal('countdown');
     } else if (tool.type === 'wheel') {
-      // 将 wheelId 写入 history.state，轮盘页初始化时读取并跳转到对应轮盘
+      // 同时写入 sessionStorage 和 URL query，确保 Electron 环境中可靠读取
       const targetId = tool.wheelId || '';
-      window.history.replaceState({ ...window.history.state, wheelId: targetId }, '');
-      navigate('/wheel');
+      if (targetId) sessionStorage.setItem('pendingWheelId', targetId);
+      else sessionStorage.removeItem('pendingWheelId');
+      navigate(targetId ? `/wheel?id=${encodeURIComponent(targetId)}` : '/wheel');
     }
   };
 

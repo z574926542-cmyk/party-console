@@ -265,12 +265,25 @@ export default function WheelPage() {
   const customWheels = state.wheels.filter(w => !DEFAULT_IDS.includes(w.id));
   const allWheels = [...defaultWheels, ...customWheels];
 
-  // 支持从 navigation state 传入目标 wheelId
-  const getNavWheelId = () => { try { return (window.history.state as { wheelId?: string })?.wheelId || ''; } catch { return ''; } };
-  const [activeWheelId, setActiveWheelId] = useState<string>(() => getNavWheelId() || DEFAULT_IDS[0]);
+  // 从 sessionStorage 或 URL query 参数读取目标 wheelId
+  // StagePage 跳转时同时写入 sessionStorage 和 URL query，双保险
+  const getTargetWheelId = () => {
+    try {
+      const fromSession = sessionStorage.getItem('pendingWheelId') || '';
+      const fromQuery = new URLSearchParams(window.location.search).get('id') || '';
+      return fromSession || fromQuery;
+    } catch { return ''; }
+  };
   const [_location] = useLocation();
-  // 路由切换时（从展台页跳转）同步更新活跃轮盘
-  useEffect(() => { const id = getNavWheelId(); if (id) setActiveWheelId(id); }, [_location]);
+  const [activeWheelId, setActiveWheelId] = useState<string>(() => getTargetWheelId() || DEFAULT_IDS[0]);
+  // 路由切换时（从展台页跳转）同步更新活跃轮盘，并清除 sessionStorage
+  useEffect(() => {
+    const id = getTargetWheelId();
+    if (id) {
+      setActiveWheelId(id);
+      sessionStorage.removeItem('pendingWheelId');
+    }
+  }, [_location]);
   const [showWheelList, setShowWheelList] = useState(true);
   const [showConfig, setShowConfig] = useState(false);
   const [spinning, setSpinning] = useState(false);

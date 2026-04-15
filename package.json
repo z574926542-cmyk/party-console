@@ -7,6 +7,7 @@
   "author": "PartyConsole",
   "license": "MIT",
   "scripts": {
+    "dev": "vite",
     "build:web": "vite build",
     "electron:dev": "NODE_ENV=development electron electron/main.js",
     "electron:build": "pnpm build:web && electron-builder --config electron-builder.yml",
